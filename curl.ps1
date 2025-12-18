@@ -28,7 +28,7 @@
 
         dia_chi_chi_tiet = "Ấp Tân Thạnh"
 
-        thoi_gian_luu_tru = "01/12/2025"
+        thoi_gian_luu_tru = "13/12/2025"
 
         luu_tru_den = "31/12/2025"
 

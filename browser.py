@@ -201,7 +201,7 @@ async def fill_guest_data(data):
         
         print(f"[THÀNH CÔNG] Đã điền xong thông tin cho khách: {data.get('ho_ten')}")
 
-        btn_addu = "a#btnSaveNLT" 
+        btn_addu = "#btnSaveNLT" 
         await shared_page.wait_for_selector(btn_addu, state="visible")
         await shared_page.click(btn_addu)
 
