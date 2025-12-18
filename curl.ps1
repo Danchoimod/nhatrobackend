@@ -23,10 +23,12 @@
         tinh = "Tỉnh Đồng Tháp"
 
         xa = "Xã Tân Long"
-        
+
         ly_do = "Đi học"
 
         dia_chi_chi_tiet = "Ấp Tân Thạnh"
+
+        thoi_gian_luu_tru = "01/12/2025"
 
         luu_tru_den = "31/12/2025"
 

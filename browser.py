@@ -7,59 +7,39 @@ app = FastAPI()
 shared_page = None 
 
 # --- HÀM HỖ TRỢ SELECT2 ---
+# --- HÀM HỖ TRỢ SELECT2 CẬP NHẬT ---
 async def fill_select2(page, container_selector, search_text):
-    if not search_text:
-        return
-    try:
-        # Đợi container xuất hiện và không bị disabled (nếu có thẻ select gốc)
-        # Tìm ID của select gốc từ container ID (ví dụ: select2-guest_cboRDPROVINCE_ID-container -> guest_cboRDPROVINCE_ID)
-        base_id = container_selector.replace("#select2-", "").replace("-container", "")
-        
-        # Đợi cho đến khi select gốc không còn bị disabled
-        await page.wait_for_function(f"""
-            () => {{
-                const el = document.getElementById('{base_id}');
-                return el && !el.disabled;
-            }}
-        """, timeout=10000)
-
-        # Click vào container để mở dropdown
-        await page.click(container_selector)
-        
-        # Đợi ô search hoặc list kết quả xuất hiện
-        # Một số Select2 có ô input search, một số thì không. Ở đây ta đợi list option.
-        result_xpath = f"//li[contains(@class, 'select2-results__option') and (text()='{search_text}' or contains(.,'{search_text}'))]"
-        
-        # Tăng timeout lên 5s để đợi load dữ liệu từ API
-        await page.wait_for_selector(result_xpath, state="visible", timeout=5000)
-        await page.click(result_xpath)
-        print(f"   [+] Đã chọn Select2: {search_text}")
-        
-        # Đợi một chút để các script onchange của trang web thực thi xong
-        await page.wait_for_timeout(500) 
-    except Exception as e:
-        print(f"   [!] Lỗi chọn Select2 '{search_text}' tại {container_selector}: {e}")
-    """Xử lý dropdown Select2: Click -> Gõ tìm kiếm -> Chọn kết quả"""
+    """Xử lý dropdown Select2: Click -> Gõ tìm kiếm -> Chọn kết quả -> Đóng dropdown"""
     try:
         # 1. Đợi và Click vào container của Select2
         await page.wait_for_selector(container_selector, state="visible", timeout=5000)
         await page.click(container_selector)
-        await asyncio.sleep(0.5)
         
-        # 2. Gõ nội dung cần tìm vào ô input search của Select2
-        search_input = "input.select2-search__field"
+        # 2. Gõ nội dung vào ô input search của Select2 ĐANG MỞ
+        # Dùng lớp .select2-container--open để đảm bảo chọn đúng ô input đang hiển thị
+        search_input = ".select2-container--open input.select2-search__field"
         await page.wait_for_selector(search_input, state="visible", timeout=3000)
         await page.fill(search_input, search_text)
-        await asyncio.sleep(1) # Đợi danh sách lọc kết quả
+        await asyncio.sleep(0.5) # Đợi danh sách lọc kết quả
         
-        # 3. Chọn kết quả khớp với text bằng XPath
-        result_xpath = f"//li[contains(@class, 'select2-results__option') and (text()='{search_text}' or contains(.,'{search_text}'))]"
+        # 3. Chọn kết quả khớp với text
+        # Sử dụng normalize-space để loại bỏ khoảng trắng thừa trong HTML
+        result_xpath = f"//li[contains(@class, 'select2-results__option') and (normalize-space(text())='{search_text}' or contains(.,'{search_text}'))]"
         await page.wait_for_selector(result_xpath, state="visible", timeout=3000)
         await page.click(result_xpath)
+        
+        # 4. QUAN TRỌNG: Đợi dropdown đóng hoàn toàn để không che khuất các trường khác
+        try:
+            await page.wait_for_selector(".select2-container--open", state="hidden", timeout=2000)
+        except:
+            # Nếu dropdown không tự đóng, nhấn Escape để đóng thủ công
+            await page.keyboard.press("Escape")
+            
         print(f"   [+] Đã chọn Select2: {search_text}")
     except Exception as e:
         print(f"   [!] Lỗi chọn Select2 '{search_text}': {e}")
-
+        # Đóng dropdown nếu bị lỗi để không làm kẹt các bước sau
+        await page.keyboard.press("Escape")
 # --- QUY TRÌNH TỰ ĐỘNG THIẾT LẬP BAN ĐẦU ---
 async def select_dropdown_human(page, selector, label_text):
     try:
@@ -176,13 +156,54 @@ async def fill_guest_data(data):
         await shared_page.fill("input#guest_txtPLACE_OF_WORK", data.get('noi_lam_viec', ''))
 
         # 8. Lý do lưu trú
-        await shared_page.fill("textarea#guest_txtREASON", data.get('ly_do', 'Đi làm việc'))
+        await shared_page.fill("textarea#guest_txtREASON", data.get('ly_do', 'làm việc'))
 
+        await shared_page.fill("textarea#guest_txtRDADDRESS", data.get('dia_chi_chi_tiet', ''))
+        
+        dob = data.get('thoi_gian_luu_tru', '')
+        if dob:
+            # Sử dụng Javascript để gán giá trị và kích hoạt sự kiện của thư viện datepicker
+            await shared_page.evaluate(f"""
+                (dateVal) => {{
+                    const el = document.getElementById('guest_txtSTART_DATE');
+                    el.value = dateVal;
+                    // Kích hoạt sự kiện của jQuery Datepicker nếu có
+                    if (window.jQuery && jQuery(el).data('datepicker')) {{
+                        jQuery(el).datepicker('update', dateVal);
+                    }}
+                    // Kích hoạt các sự kiện input/change để web nhận diện
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    el.blur();
+                }}
+            """, dob)
+
+        dob = data.get('luu_tru_den', '')
+        if dob:
+            # Sử dụng Javascript để gán giá trị và kích hoạt sự kiện của thư viện datepicker
+            await shared_page.evaluate(f"""
+                (dateVal) => {{
+                    const el = document.getElementById('guest_txtEND_DATE');
+                    el.value = dateVal;
+                    // Kích hoạt sự kiện của jQuery Datepicker nếu có
+                    if (window.jQuery && jQuery(el).data('datepicker')) {{
+                        jQuery(el).datepicker('update', dateVal);
+                    }}
+                    // Kích hoạt các sự kiện input/change để web nhận diện
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    el.blur();
+                }}
+            """, dob)
         # Kích hoạt validate form lần cuối bằng cách blur họ tên
         await shared_page.focus("input#guest_txtCITIZENNAME")
         await shared_page.evaluate("document.activeElement.blur()")
         
         print(f"[THÀNH CÔNG] Đã điền xong thông tin cho khách: {data.get('ho_ten')}")
+
+        btn_addu = "a#btnSaveNLT" 
+        await shared_page.wait_for_selector(btn_addu, state="visible")
+        await shared_page.click(btn_addu)
 
     except Exception as e:
         print(f"[LỖI] Nhập liệu khách hàng thất bại: {e}")
