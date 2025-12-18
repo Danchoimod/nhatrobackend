@@ -107,6 +107,9 @@ async def fill_guest_data(data):
         # 5. Quốc gia nơi ở (Select2)
         await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_gia', 'Cộng hòa xã hội chủ nghĩa Việt Nam'))
 
+        await fill_select2(shared_page, "#select2-guest_cboRDPROVINCE_ID-container", data.get('tinh', ''))
+
+        await fill_select2(shared_page, "#select2-guest_cboRDADDRESS_ID-container", data.get('xa', ''))
         # 5.1. Quốc tịch (Select multiple - guest_mulNATIONALITY)
         try:
             nationality = data.get('quoc_tich', 'Việt Nam')
@@ -138,6 +141,8 @@ async def fill_guest_data(data):
 
         # 7. Số phòng
         await shared_page.fill("input#guest_txtROOM", data.get('so_phong', ''))
+
+        await shared_page.fill("input#guest_txtPLACE_OF_WORK", data.get('noi_lam_viec', ''))
 
         # 8. Lý do lưu trú
         await shared_page.fill("textarea#guest_txtREASON", data.get('ly_do', 'Đi làm việc'))

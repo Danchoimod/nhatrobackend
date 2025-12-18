@@ -13,10 +13,16 @@
         quoc_tich = "Việt Nam"
 
         dan_toc = "Kinh"
-        
+
+        noi_lam_viec = "Tự do"
+
         nghe_nghiep = "Tự do"
 
-        so_phong = "P.201"
+        so_phong = "C11"
+        
+        tinh = "tỉnh Đồng Tháp"
+
+        xa = "xã Tân Long"
 
         ly_do = "Đi làm việc"
 
