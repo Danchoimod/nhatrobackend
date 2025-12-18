@@ -101,8 +101,34 @@ async def fill_guest_data(data):
         # 4. Giới tính (Select2)
         await fill_select2(shared_page, "#select2-guest_cboGENDER_ID-container", data.get('gioi_tinh', 'Nam'))
 
-        # 5. Quốc tịch (Select2)
-        await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_tich', 'Việt Nam'))
+        # 5. Quốc gia nơi ở (Select2)
+        await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_gia', 'Cộng hòa xã hội chủ nghĩa Việt Nam'))
+
+        # 5.1. Quốc tịch (Select multiple - guest_mulNATIONALITY)
+        try:
+            nationality = data.get('quoc_tich', 'Việt Nam')
+            # Chờ select quốc tịch xuất hiện
+            await shared_page.wait_for_selector("#guest_mulNATIONALITY", state="visible", timeout=5000)
+            # Sử dụng JavaScript để chọn option theo text
+            await shared_page.evaluate(f"""
+                (nationality) => {{
+                    const select = document.getElementById('guest_mulNATIONALITY');
+                    if (select) {{
+                        // Tìm option có text khớp
+                        for (let option of select.options) {{
+                            if (option.text.includes(nationality) || option.text === nationality) {{
+                                option.selected = true;
+                                break;
+                            }}
+                        }}
+                        // Kích hoạt sự kiện change
+                        select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    }}
+                }}
+            """, nationality)
+            print(f"   [+] Đã chọn quốc tịch: {nationality}")
+        except Exception as e:
+            print(f"   [!] Lỗi chọn quốc tịch: {e}")
 
         # 6. Nghề nghiệp (Select2)
         await fill_select2(shared_page, "#select2-guest_cboOCCUPATION-container", data.get('nghe_nghiep', 'Tự do'))
@@ -132,17 +158,30 @@ async def check_url_and_redirect():
     global shared_page
     # URL sau khi đăng nhập thành công
     target_trigger = "https://dichvucong.bocongan.gov.vn/?home=1"
+    # URL cần phát hiện để chuyển hướng
+    cong_dan_url = "https://dichvucong.bocongan.gov.vn/dich-vu-cong/cong-dan"
+    # URL đích khi phát hiện cong-dan
+    search_result_url = "https://dichvucong.bocongan.gov.vn/bocongan/bothutuc/listThuTuc?co_quan_cha=&loai_co_quan=&co_quan_con=&linh_vuc=&muc_do=&tukhoa=l%C6%B0u%20tr%C3%BA&doi_tuong=&cap_thuc_hien=&co_quan_cuc=&co_quan_tinh=&co_quan_huyen=&co_quan_xa="
     # URL trực tiếp vào form Khai báo tạm trú
     target_destination = "https://dichvucong.bocongan.gov.vn/bo-cong-an/tiep-nhan-online/chon-truong-hop-ho-so?ma-thu-tuc-public=26346"
     
     while True:
         try:
-            if shared_page and target_trigger in shared_page.url:
-                print("[HỆ THỐNG] Đăng nhập thành công! Đang chuyển hướng tới form...")
-                await shared_page.goto(target_destination)
-                await shared_page.wait_for_load_state("networkidle")
-                await auto_fill_location_and_open_form()
-                break
+            if shared_page:
+                current_url = shared_page.url
+                # Kiểm tra nếu đang ở trang cong-dan thì chuyển sang trang tìm kiếm
+                if cong_dan_url in current_url:
+                    print("[HỆ THỐNG] Phát hiện trang công dân! Đang chuyển sang trang tìm kiếm...")
+                    await shared_page.goto(search_result_url)
+                    await shared_page.wait_for_load_state("networkidle")
+                    await asyncio.sleep(2)
+                # Kiểm tra đăng nhập thành công và chuyển tới form
+                elif target_trigger in current_url:
+                    print("[HỆ THỐNG] Đăng nhập thành công! Đang chuyển hướng tới form...")
+                    await shared_page.goto(target_destination)
+                    await shared_page.wait_for_load_state("networkidle")
+                    await auto_fill_location_and_open_form()
+                    break
         except: pass
         await asyncio.sleep(2)
 
