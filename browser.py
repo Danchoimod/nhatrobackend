@@ -101,6 +101,9 @@ async def fill_guest_data(data):
         # 4. Giới tính (Select2)
         await fill_select2(shared_page, "#select2-guest_cboGENDER_ID-container", data.get('gioi_tinh', 'Nam'))
 
+        # 4.1. Dân tộc (Select2)
+
+
         # 5. Quốc gia nơi ở (Select2)
         await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_gia', 'Cộng hòa xã hội chủ nghĩa Việt Nam'))
 
@@ -129,7 +132,7 @@ async def fill_guest_data(data):
             print(f"   [+] Đã chọn quốc tịch: {nationality}")
         except Exception as e:
             print(f"   [!] Lỗi chọn quốc tịch: {e}")
-
+        await fill_select2(shared_page, "#select2-guest_cboETHNIC_ID-container", data.get('dan_toc', 'Kinh'))
         # 6. Nghề nghiệp (Select2)
         await fill_select2(shared_page, "#select2-guest_cboOCCUPATION-container", data.get('nghe_nghiep', 'Tự do'))
 
