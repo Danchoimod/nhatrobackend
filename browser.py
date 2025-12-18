@@ -1,0 +1,180 @@
+import asyncio
+import uvicorn
+from fastapi import FastAPI, BackgroundTasks
+from playwright.async_api import async_playwright
+
+app = FastAPI()
+shared_page = None 
+
+# --- HÀM HỖ TRỢ SELECT2 ---
+async def fill_select2(page, container_selector, search_text):
+    """Xử lý dropdown Select2: Click -> Gõ tìm kiếm -> Chọn kết quả"""
+    try:
+        # 1. Đợi và Click vào container của Select2
+        await page.wait_for_selector(container_selector, state="visible", timeout=5000)
+        await page.click(container_selector)
+        await asyncio.sleep(0.5)
+        
+        # 2. Gõ nội dung cần tìm vào ô input search của Select2
+        search_input = "input.select2-search__field"
+        await page.wait_for_selector(search_input, state="visible", timeout=3000)
+        await page.fill(search_input, search_text)
+        await asyncio.sleep(1) # Đợi danh sách lọc kết quả
+        
+        # 3. Chọn kết quả khớp với text bằng XPath
+        result_xpath = f"//li[contains(@class, 'select2-results__option') and (text()='{search_text}' or contains(.,'{search_text}'))]"
+        await page.wait_for_selector(result_xpath, state="visible", timeout=3000)
+        await page.click(result_xpath)
+        print(f"   [+] Đã chọn Select2: {search_text}")
+    except Exception as e:
+        print(f"   [!] Lỗi chọn Select2 '{search_text}': {e}")
+
+# --- QUY TRÌNH TỰ ĐỘNG THIẾT LẬP BAN ĐẦU ---
+async def select_dropdown_human(page, selector, label_text):
+    try:
+        print(f"   [+] Đang chọn: {label_text}")
+        await page.wait_for_selector(f"{selector}:not([disabled])", timeout=15000)
+        await page.select_option(selector, label=label_text)
+        await page.dispatch_event(selector, "change")
+        await asyncio.sleep(2) # Đợi web load dữ liệu phụ thuộc (ví dụ: chọn Quận xong đợi load Phường)
+    except Exception as e:
+        print(f"   [!] Lỗi khi chọn {label_text}: {e}")
+
+async def auto_fill_location_and_open_form():
+    global shared_page
+    try:
+        print("\n[BƯỚC 1] Thiết lập Cơ sở lưu trú...")
+        # Lưu ý: Thay đổi text cho đúng với dữ liệu thực tế trên web của bạn
+        await select_dropdown_human(shared_page, "select#accomStay_cboPROVINCE_ID", "Thành phố Cần Thơ")
+        await select_dropdown_human(shared_page, "select#accomStay_cboADDRESS_ID", "Phường Long Tuyền")
+        await select_dropdown_human(shared_page, "select#accomStay_cboACCOMMODATION_TYPE", "Nhà ngăn phòng cho thuê")
+        await select_dropdown_human(shared_page, "select#accomStay_cboNAME", "NHÀ TRỌ TÂM AN 2")
+        
+        print("[BƯỚC 2] Mở form thêm người...")
+        btn_add = "a#btnAddPersonLT" 
+        await shared_page.wait_for_selector(btn_add, state="visible")
+        await shared_page.click(btn_add)
+        
+        # Chờ modal hiện lên
+        await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=10000)
+        await asyncio.sleep(1)
+        print("[OK] Sẵn sàng nhận dữ liệu khách.")
+    except Exception as e:
+        print(f"[LỖI] Thiết lập thất bại: {e}")
+
+# --- HÀM ĐIỀN CHI TIẾT THÔNG TIN KHÁCH ---
+async def fill_guest_data(data):
+    global shared_page
+    if not shared_page: 
+        print("[LỖI] Chưa kết nối được trình duyệt.")
+        return
+        
+    try:
+        print(f"\n--- Đang nhập liệu cho: {data.get('ho_ten')} ---")
+
+        # 1. Họ và tên (Viết hoa)
+        await shared_page.fill("input#guest_txtCITIZENNAME", data.get('ho_ten', '').upper())
+
+        # 2. Số CCCD/ĐDCN
+        await shared_page.fill("input#guest_txtIDCARD_NUMBER", data.get('cccd', ''))
+
+        # 3. NGÀY SINH (Xử lý đặc biệt cho Datepicker)
+        dob = data.get('ngay_birth', data.get('ngay_sinh', ''))
+        if dob:
+            # Sử dụng Javascript để gán giá trị và kích hoạt sự kiện của thư viện datepicker
+            await shared_page.evaluate(f"""
+                (dateVal) => {{
+                    const el = document.getElementById('guest_txtDOB');
+                    el.value = dateVal;
+                    // Kích hoạt sự kiện của jQuery Datepicker nếu có
+                    if (window.jQuery && jQuery(el).data('datepicker')) {{
+                        jQuery(el).datepicker('update', dateVal);
+                    }}
+                    // Kích hoạt các sự kiện input/change để web nhận diện
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    el.blur();
+                }}
+            """, dob)
+            print(f"   [+] Đã nhập ngày sinh: {dob}")
+
+        # 4. Giới tính (Select2)
+        await fill_select2(shared_page, "#select2-guest_cboGENDER_ID-container", data.get('gioi_tinh', 'Nam'))
+
+        # 5. Quốc tịch (Select2)
+        await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_tich', 'Việt Nam'))
+
+        # 6. Nghề nghiệp (Select2)
+        await fill_select2(shared_page, "#select2-guest_cboOCCUPATION-container", data.get('nghe_nghiep', 'Tự do'))
+
+        # 7. Số phòng
+        await shared_page.fill("input#guest_txtROOM", data.get('so_phong', ''))
+
+        # 8. Lý do lưu trú
+        await shared_page.fill("textarea#guest_txtREASON", data.get('ly_do', 'Đi làm việc'))
+
+        # Kích hoạt validate form lần cuối bằng cách blur họ tên
+        await shared_page.focus("input#guest_txtCITIZENNAME")
+        await shared_page.evaluate("document.activeElement.blur()")
+        
+        print(f"[THÀNH CÔNG] Đã điền xong thông tin cho khách: {data.get('ho_ten')}")
+
+    except Exception as e:
+        print(f"[LỖI] Nhập liệu khách hàng thất bại: {e}")
+
+# --- API & MONITORING ---
+@app.post("/send-to-web")
+async def receive_data(data: dict, background_tasks: BackgroundTasks):
+    background_tasks.add_task(fill_guest_data, data)
+    return {"status": "processing", "message": f"Đang nhập liệu cho {data.get('ho_ten')}"}
+
+async def check_url_and_redirect():
+    global shared_page
+    # URL sau khi đăng nhập thành công
+    target_trigger = "https://dichvucong.bocongan.gov.vn/?home=1"
+    # URL trực tiếp vào form Khai báo tạm trú
+    target_destination = "https://dichvucong.bocongan.gov.vn/bo-cong-an/tiep-nhan-online/chon-truong-hop-ho-so?ma-thu-tuc-public=26346"
+    
+    while True:
+        try:
+            if shared_page and target_trigger in shared_page.url:
+                print("[HỆ THỐNG] Đăng nhập thành công! Đang chuyển hướng tới form...")
+                await shared_page.goto(target_destination)
+                await shared_page.wait_for_load_state("networkidle")
+                await auto_fill_location_and_open_form()
+                break
+        except: pass
+        await asyncio.sleep(2)
+
+async def main():
+    global shared_page
+    async with async_playwright() as p:
+        try:
+            # Kết nối vào Chrome đang mở sẵn (cần mở chrome với --remote-debugging-port=9222)
+            browser = await p.chromium.connect_over_cdp("http://localhost:9222")
+            
+            if browser.contexts:
+                context = browser.contexts[0]
+                shared_page = context.pages[0] if context.pages else await context.new_page()
+            else:
+                context = await browser.new_context()
+                shared_page = await context.new_page()
+            
+            print("[HỆ THỐNG] Đã kết nối Chrome. Vui lòng thực hiện đăng nhập trên trình duyệt...")
+            await shared_page.goto("https://dichvucong.bocongan.gov.vn/")
+            
+            # Chạy nền việc kiểm tra trạng thái đăng nhập
+            asyncio.create_task(check_url_and_redirect())
+            
+            # Khởi chạy server API
+            config = uvicorn.Config(app, host="127.0.0.1", port=8000, loop="asyncio")
+            server = uvicorn.Server(config)
+            await server.serve()
+        except Exception as e:
+            print(f"[LỖI] Không thể kết nối Chrome (Hãy kiểm tra port 9222): {e}")
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n[DỪNG] Đã đóng chương trình.")
