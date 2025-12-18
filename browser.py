@@ -8,6 +8,37 @@ shared_page = None
 
 # --- HÀM HỖ TRỢ SELECT2 ---
 async def fill_select2(page, container_selector, search_text):
+    if not search_text:
+        return
+    try:
+        # Đợi container xuất hiện và không bị disabled (nếu có thẻ select gốc)
+        # Tìm ID của select gốc từ container ID (ví dụ: select2-guest_cboRDPROVINCE_ID-container -> guest_cboRDPROVINCE_ID)
+        base_id = container_selector.replace("#select2-", "").replace("-container", "")
+        
+        # Đợi cho đến khi select gốc không còn bị disabled
+        await page.wait_for_function(f"""
+            () => {{
+                const el = document.getElementById('{base_id}');
+                return el && !el.disabled;
+            }}
+        """, timeout=10000)
+
+        # Click vào container để mở dropdown
+        await page.click(container_selector)
+        
+        # Đợi ô search hoặc list kết quả xuất hiện
+        # Một số Select2 có ô input search, một số thì không. Ở đây ta đợi list option.
+        result_xpath = f"//li[contains(@class, 'select2-results__option') and (text()='{search_text}' or contains(.,'{search_text}'))]"
+        
+        # Tăng timeout lên 5s để đợi load dữ liệu từ API
+        await page.wait_for_selector(result_xpath, state="visible", timeout=5000)
+        await page.click(result_xpath)
+        print(f"   [+] Đã chọn Select2: {search_text}")
+        
+        # Đợi một chút để các script onchange của trang web thực thi xong
+        await page.wait_for_timeout(500) 
+    except Exception as e:
+        print(f"   [!] Lỗi chọn Select2 '{search_text}' tại {container_selector}: {e}")
     """Xử lý dropdown Select2: Click -> Gõ tìm kiếm -> Chọn kết quả"""
     try:
         # 1. Đợi và Click vào container của Select2

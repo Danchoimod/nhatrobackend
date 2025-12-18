@@ -2,7 +2,7 @@
 
         ho_ten = "TRẦN PHÚ PHÀM"
 
-        cccd = "091234567890"
+        cccd = "087206008853"
 
         ngay_birth = "29/09/2006"
 
@@ -20,11 +20,15 @@
 
         so_phong = "C11"
         
-        tinh = "tỉnh Đồng Tháp"
+        tinh = "Tỉnh Đồng Tháp"
 
-        xa = "xã Tân Long"
+        xa = "Xã Tân Long"
+        
+        ly_do = "Đi học"
 
-        ly_do = "Đi làm việc"
+        dia_chi_chi_tiet = "Ấp Tân Thạnh"
+
+        luu_tru_den = "31/12/2025"
 
     } | ConvertTo-Json
 
