@@ -221,8 +221,18 @@ async def fill_guest_data(data):
         print(f"[LỖI] Nhập liệu khách hàng thất bại: {e}")
 
 # --- API & MONITORING ---
+# Tìm đến đoạn cuối file browser.py và thay thế bằng nội dung này:
+
 @app.post("/send-to-web")
 async def receive_data(data: dict, background_tasks: BackgroundTasks):
+    # Kiểm tra nếu dữ liệu có cấu trúc {"items": [...]}
+    if "items" in data and isinstance(data["items"], list):
+        print(f"[HỆ THỐNG] Nhận danh sách {len(data['items'])} khách hàng.")
+        for item in data["items"]:
+            background_tasks.add_task(fill_guest_data, item)
+        return {"status": "processing", "message": f"Đang xếp hàng nhập liệu {len(data['items'])} người."}
+    
+    # Trường hợp gửi 1 người đơn lẻ
     background_tasks.add_task(fill_guest_data, data)
     return {"status": "processing", "message": f"Đang nhập liệu cho {data.get('ho_ten')}"}
 
