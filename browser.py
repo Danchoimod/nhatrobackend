@@ -9,7 +9,6 @@ app = FastAPI()
 shared_page = None 
 data_queue = asyncio.Queue()
 is_processing = False
-# Đã xóa biến has_error
 
 # Quản lý kết nối để gửi tín hiệu đổi màu
 class ConnectionManager:
@@ -45,7 +44,6 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 async def fill_select2(page, container_selector, search_text):
-    # Logic cũ giữ nguyên, chỉ thêm try-except để đảm bảo an toàn nếu cần
     await page.wait_for_selector(container_selector, state="visible", timeout=5000)
     await page.click(container_selector)
     search_input = ".select2-container--open input.select2-search__field"
@@ -94,39 +92,52 @@ async def fill_guest_data(task_item):
     data = task_item['data']
     idx = task_item['index']
     if not shared_page: return
+    
     try:
         # Gửi tín hiệu đang xử lý dòng này
         await manager.broadcast({"type": "PROCESSING", "index": idx})
         
         print(f"\n--- Đang nhập liệu cho: {data.get('ho_ten')} ---")
         
-        # Đảm bảo form đang mở trước khi điền
+        # Đảm bảo form đang mở trước khi điền - KIỂM TRA LỖI SỚM
         try:
             if not await shared_page.is_visible("#addpersonLT"):
                 await shared_page.click("a#btnAddPersonLT")
                 await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=5000)
-        except: pass
+        except Exception as form_err:
+            raise Exception(f"Không thể mở form: {form_err}")
 
-        await shared_page.fill("input#guest_txtCITIZENNAME", data.get('ho_ten', '').upper())
-        await shared_page.fill("input#guest_txtIDCARD_NUMBER", data.get('cccd', ''))
+        # Điền thông tin cơ bản - KIỂM TRA LỖI NGAY
+        try:
+            await shared_page.fill("input#guest_txtCITIZENNAME", data.get('ho_ten', '').upper(), timeout=3000)
+            await shared_page.fill("input#guest_txtIDCARD_NUMBER", data.get('cccd', ''), timeout=3000)
+        except Exception as fill_err:
+            raise Exception(f"Lỗi điền thông tin cơ bản: {fill_err}")
 
         dob = data.get('ngay_birth', data.get('ngay_sinh', ''))
         if dob:
-            await shared_page.evaluate(f"""
-                (dateVal) => {{
-                    const el = document.getElementById('guest_txtDOB');
-                    el.value = dateVal;
-                    if (window.jQuery && jQuery(el).data('datepicker')) {{ jQuery(el).datepicker('update', dateVal); }}
-                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
-                    el.blur();
-                }}
-            """, dob)
+            try:
+                await shared_page.evaluate(f"""
+                    (dateVal) => {{
+                        const el = document.getElementById('guest_txtDOB');
+                        el.value = dateVal;
+                        if (window.jQuery && jQuery(el).data('datepicker')) {{ jQuery(el).datepicker('update', dateVal); }}
+                        el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                        el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        el.blur();
+                    }}
+                """, dob)
+            except Exception as dob_err:
+                raise Exception(f"Lỗi điền ngày sinh: {dob_err}")
 
-        await fill_select2(shared_page, "#select2-guest_cboGENDER_ID-container", data.get('gioi_tinh', ''))
-        await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_gia', 'Cộng hòa xã hội chủ nghĩa Việt Nam'))
-        await fill_select2(shared_page, "#select2-guest_cboRDPROVINCE_ID-container", data.get('tinh', ''))
-        await fill_select2(shared_page, "#select2-guest_cboRDADDRESS_ID-container", data.get('xa', ''))
+        # Điền select2 - KIỂM TRA LỖI NGAY
+        try:
+            await fill_select2(shared_page, "#select2-guest_cboGENDER_ID-container", data.get('gioi_tinh', ''))
+            await fill_select2(shared_page, "#select2-guest_cboCOUNTRY-container", data.get('quoc_gia', 'Cộng hòa xã hội chủ nghĩa Việt Nam'))
+            await fill_select2(shared_page, "#select2-guest_cboRDPROVINCE_ID-container", data.get('tinh', ''))
+            await fill_select2(shared_page, "#select2-guest_cboRDADDRESS_ID-container", data.get('xa', ''))
+        except Exception as select_err:
+            raise Exception(f"Lỗi chọn dropdown: {select_err}")
         
         try:
             nationality = data.get('quoc_tich', 'Việt Nam')
@@ -144,14 +155,19 @@ async def fill_guest_data(task_item):
                     }}
                 }}
             """, nationality)
-        except: pass
+        except Exception as nat_err:
+            raise Exception(f"Lỗi chọn quốc tịch: {nat_err}")
 
-        await fill_select2(shared_page, "#select2-guest_cboETHNIC_ID-container", data.get('dan_toc', 'Kinh'))
-        await fill_select2(shared_page, "#select2-guest_cboOCCUPATION-container", data.get('nghe_nghiep', 'Tự do'))
-        await shared_page.fill("input#guest_txtROOM", data.get('so_phong', ''))
-        await shared_page.fill("input#guest_txtPLACE_OF_WORK", data.get('noi_lam_viec', ''))
-        await shared_page.fill("textarea#guest_txtREASON", data.get('ly_do', 'làm việc'))
-        await shared_page.fill("textarea#guest_txtRDADDRESS", data.get('dia_chi_chi_tiet', ''))
+        # Điền các select2 còn lại và thông tin khác
+        try:
+            await fill_select2(shared_page, "#select2-guest_cboETHNIC_ID-container", data.get('dan_toc', 'Kinh'))
+            await fill_select2(shared_page, "#select2-guest_cboOCCUPATION-container", data.get('nghe_nghiep', 'Tự do'))
+            await shared_page.fill("input#guest_txtROOM", data.get('so_phong', ''), timeout=3000)
+            await shared_page.fill("input#guest_txtPLACE_OF_WORK", data.get('noi_lam_viec', ''), timeout=3000)
+            await shared_page.fill("textarea#guest_txtREASON", data.get('ly_do', 'làm việc'), timeout=3000)
+            await shared_page.fill("textarea#guest_txtRDADDRESS", data.get('dia_chi_chi_tiet', ''), timeout=3000)
+        except Exception as fields_err:
+            raise Exception(f"Lỗi điền thông tin bổ sung: {fields_err}")
         
         sd = data.get('thoi_gian_luu_tru', '')
         if sd: await shared_page.evaluate(f"document.getElementById('guest_txtSTART_DATE').value = '{sd}'")
@@ -161,40 +177,35 @@ async def fill_guest_data(task_item):
         await shared_page.focus("input#guest_txtCITIZENNAME")
         await shared_page.evaluate("document.activeElement.blur()")
         
-        await shared_page.click("#btnSaveNLT")
-        print(f"[THÀNH CÔNG] Đã lưu: {data.get('ho_ten')}")
-
-        # Thông báo hoàn thành để đổi màu xanh
-        await manager.broadcast({"type": "COMPLETED", "index": idx})
+        # Click nút lưu - KIỂM TRA LỖI QUAN TRỌNG
+        try:
+            await shared_page.click("#btnSaveNLT", timeout=3000)
+            print(f"[THÀNH CÔNG] Đã lưu: {data.get('ho_ten')}")
+            # Thông báo hoàn thành để đổi màu xanh
+            await manager.broadcast({"type": "COMPLETED", "index": idx})
+        except Exception as save_err:
+            raise Exception(f"Lỗi khi nhấn nút Lưu: {save_err}")
 
         await asyncio.sleep(2) 
         # Chuẩn bị cho người tiếp theo
-        await shared_page.click("a#btnAddPersonLT")
-        await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=10000)
-        await asyncio.sleep(1)
+        try:
+            await shared_page.click("a#btnAddPersonLT", timeout=3000)
+            await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=10000)
+            await asyncio.sleep(1)
+        except Exception as next_err:
+            print(f"[CẢNH BÁO] Không mở được form tiếp theo: {next_err}")
 
     except Exception as e:
-        # XỬ LÝ LỖI MỚI: Không dừng, chỉ báo lỗi và reset form
+        # XỬ LÝ LỖI: Phát hiện sớm và dừng ngay, KHÔNG reset form
         await manager.broadcast({"type": "ERROR", "index": idx})
-        print(f"\n[SKIP] Bỏ qua user do lỗi: {e}") 
-        
-        # Cố gắng reset UI để nhập người tiếp theo
-        try:
-            print("   -> Đang reset form...")
-            await shared_page.keyboard.press("Escape") # Đóng dropdown nếu bị kẹt
-            await asyncio.sleep(1)
-            # Nhấn nút thêm mới để load lại form sạch
-            await shared_page.click("a#btnAddPersonLT")
-            await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=5000)
-            await asyncio.sleep(1)
-        except Exception as recover_err:
-            print(f"   [!] Không thể reset form: {recover_err}")
+        print(f"\n[SKIP] Bỏ qua user #{idx+1} ({data.get('ho_ten', 'N/A')}): {str(e)}")
+        print("   -> Chuyển sang user tiếp theo (dữ liệu cũ sẽ bị ghi đè)")
+        # Không reset form, để user tiếp theo ghi đè lên
 
 async def process_queue():
     global is_processing
     is_processing = True
     while not data_queue.empty():
-        # Không còn kiểm tra has_error để break nữa
         task_item = await data_queue.get()
         await fill_guest_data(task_item)
         data_queue.task_done()
