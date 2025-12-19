@@ -13,147 +13,164 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <div class="container mx-auto px-4 py-6">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <div>
-                <h1 class="text-2xl font-bold text-blue-800">Hệ Thống Nhập Liệu Lưu Trú</h1>
-                <p class="text-gray-500 text-sm font-medium">Đồng bộ dữ liệu trực tiếp với trình duyệt tự động</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importJSON(event)">
-                <button onclick="document.getElementById('importFile').click()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2 rounded-xl transition border border-amber-200">
-                    <i class="fa-solid fa-file-import mr-2"></i>Nhập JSON
-                </button>
-                <button onclick="exportJSON()" class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-xl transition border border-gray-300">
-                    <i class="fa-solid fa-download mr-2"></i>Xuất JSON
-                </button>
-                <button onclick="sendToPython()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-lg transition transform active:scale-95 border border-blue-700">
-                    <i class="fa-solid fa-paper-plane mr-2"></i>GỬI ĐẾN TRÌNH DUYỆT
-                </button>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 sticky top-6 h-fit max-h-[90vh] overflow-y-auto">
-                <h2 class="text-lg font-bold mb-4 text-gray-800 flex items-center border-b pb-2">
-                    <i class="fa-solid fa-user-plus mr-2 text-blue-600"></i>Thông tin chi tiết khách
-                </h2>
-                <form id="guestForm" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Họ và tên</label>
-                            <input type="text" id="ho_ten" name="ho_ten" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 uppercase focus:ring-2 focus:ring-blue-500 outline-none" placeholder="TRẦN PHÚ PHÀM" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Số CCCD</label>
-                            <input type="text" id="cccd" name="cccd" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0872..." required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Ngày sinh</label>
-                            <input type="text" id="ngay_birth" name="ngay_birth" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="29/09/2006" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Giới tính</label>
-                            <select id="gioi_tinh" name="gioi_tinh" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 bg-white">
-                                <option>Nam</option>
-                                <option>Nữ</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Số phòng</label>
-                            <input type="text" id="so_phong" name="so_phong" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="C11">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Dân tộc</label>
-                            <input type="text" name="dan_toc" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Kinh">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Quốc tịch</label>
-                            <input type="text" name="quoc_tich" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Việt Nam">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Nghề nghiệp</label>
-                            <input type="text" name="nghe_nghiep" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tự do">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Nơi làm việc</label>
-                            <input type="text" name="noi_lam_viec" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tự do">
-                        </div>
-                    </div>
-
-                    <details class="group bg-gray-50 rounded-xl overflow-hidden border border-gray-100" open>
-                        <summary class="text-sm text-gray-600 cursor-pointer font-bold p-3 bg-gray-100 list-none flex justify-between items-center">
-                            <span>ĐỊA CHỈ THƯỜNG TRÚ</span>
-                            <i class="fa-solid fa-chevron-down text-xs group-open:rotate-180 transition"></i>
-                        </summary>
-                        <div class="p-4 space-y-3 border-t border-gray-200">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tỉnh / TP</label>
-                                <input type="text" name="tinh" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tỉnh Đồng Tháp">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Xã / Phường</label>
-                                <input type="text" name="xa" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Xã Tân Long">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Địa chỉ chi tiết (Ấp/Số nhà)</label>
-                                <input type="text" name="dia_chi_chi_tiet" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Ấp Tân Thạnh">
-                            </div>
-                        </div>
-                    </details>
-
-                    <div class="grid grid-cols-2 gap-3 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-                        <div class="col-span-2">
-                            <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider">Lý do lưu trú</label>
-                            <input type="text" name="ly_do" class="mt-1 block w-full border border-blue-200 rounded-lg p-2" value="Đi học">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider">Lưu trú từ ngày</label>
-                            <input type="text" name="thoi_gian_luu_tru" class="mt-1 block w-full border border-blue-200 rounded-lg p-2" value="13/12/2025">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider">Lưu trú đến ngày</label>
-                            <input type="text" name="luu_tru_den" class="mt-1 block w-full border border-blue-200 rounded-lg p-2" value="31/12/2025">
-                        </div>
-                    </div>
-
-                    <button type="button" onclick="addToTable()" class="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 flex justify-center items-center">
-                        <i class="fa-solid fa-user-plus mr-2"></i>Thêm vào danh sách
+    <nav class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-blue-800 flex items-center">
+                        <i class="fa-solid fa-hotel mr-2"></i> Hệ Thống Nhập Liệu Lưu Trú
+                    </h1>
+                    <p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Đồng bộ dữ liệu trực tiếp qua WebSocket</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importJSON(event)">
+                    <button onclick="document.getElementById('importFile').click()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2 rounded-xl transition border border-amber-200 text-sm font-semibold">
+                        <i class="fa-solid fa-file-import mr-1"></i> Nhập JSON
                     </button>
-                </form>
-            </div>
-
-            <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-fit">
-                <div class="p-5 border-b bg-white flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-gray-800">
-                        Danh sách chờ gửi 
-                        <span id="count" class="ml-2 px-2.5 py-0.5 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">0</span>
-                    </h2>
-                    <button onclick="clearAll()" class="text-gray-400 hover:text-red-500 transition text-sm font-bold flex items-center">
-                        <i class="fa-solid fa-trash-can mr-2"></i>Xóa sạch
+                    <button onclick="exportJSON()" class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-xl transition border border-gray-300 text-sm font-semibold">
+                        <i class="fa-solid fa-download mr-1"></i> Xuất
+                    </button>
+                    <button onclick="sendToPython()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-lg transition transform active:scale-95 border border-blue-700 text-sm">
+                        <i class="fa-solid fa-paper-plane mr-1"></i> GỬI ĐẾN TRÌNH DUYỆT
                     </button>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Khách hàng</th>
-                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Phòng</th>
-                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody id="guestTable" class="divide-y divide-gray-100 bg-white">
-                            <tr id="emptyRow">
-                                <td colspan="3" class="px-6 py-12 text-center text-gray-400">
-                                    <i class="fa-solid fa-inbox text-4xl mb-3 block opacity-20"></i>
-                                    Trống.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-5">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 sticky top-28 h-fit max-h-[80vh] overflow-y-auto">
+                    <h2 id="formTitle" class="text-lg font-bold mb-4 text-gray-800 flex items-center border-b pb-2">
+                        <i class="fa-solid fa-user-plus mr-2 text-blue-600"></i>Thông tin chi tiết khách
+                    </h2>
+                    <form id="guestForm" class="space-y-4">
+                        <input type="hidden" id="editIndex" value="-1">
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Họ và tên</label>
+                                <input type="text" id="ho_ten" name="ho_ten" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 uppercase focus:ring-2 focus:ring-blue-500 outline-none font-semibold" placeholder="TRẦN PHÚ PHÀM" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Số CCCD</label>
+                                <input type="text" id="cccd" name="cccd" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0872..." required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Ngày sinh</label>
+                                <input type="text" id="ngay_birth" name="ngay_birth" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="29/09/2006" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Giới tính</label>
+                                <select id="gioi_tinh" name="gioi_tinh" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 bg-white">
+                                    <option>Nam</option>
+                                    <option>Nữ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Số phòng</label>
+                                <input type="text" id="so_phong" name="so_phong" class="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-600" placeholder="C11">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Dân tộc</label>
+                                <input type="text" id="dan_toc" name="dan_toc" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Kinh">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Quốc tịch</label>
+                                <input type="text" id="quoc_tich" name="quoc_tich" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Việt Nam">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Nghề nghiệp</label>
+                                <input type="text" id="nghe_nghiep" name="nghe_nghiep" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tự do">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Nơi làm việc</label>
+                                <input type="text" id="noi_lam_viec" name="noi_lam_viec" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tự do">
+                            </div>
+                        </div>
+
+                        <details class="group bg-gray-50 rounded-xl overflow-hidden border border-gray-100" open>
+                            <summary class="text-sm text-gray-600 cursor-pointer font-bold p-3 bg-gray-100 list-none flex justify-between items-center">
+                                <span>ĐỊA CHỈ THƯỜNG TRÚ</span>
+                                <i class="fa-solid fa-chevron-down text-xs group-open:rotate-180 transition"></i>
+                            </summary>
+                            <div class="p-4 space-y-3 border-t border-gray-200">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tỉnh / TP</label>
+                                    <input type="text" id="tinh" name="tinh" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tỉnh Đồng Tháp">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Xã / Phường</label>
+                                    <input type="text" id="xa" name="xa" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Xã Tân Long">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Địa chỉ chi tiết</label>
+                                    <input type="text" id="dia_chi_chi_tiet" name="dia_chi_chi_tiet" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Ấp Tân Thạnh">
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="grid grid-cols-2 gap-3 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider">Lý do lưu trú</label>
+                                <input type="text" id="ly_do" name="ly_do" class="mt-1 block w-full border border-blue-200 rounded-lg p-2" value="Đi học">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider">Từ ngày</label>
+                                <input type="text" id="thoi_gian_luu_tru" name="thoi_gian_luu_tru" class="mt-1 block w-full border border-blue-200 rounded-lg p-2" value="13/12/2025">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-blue-600 uppercase tracking-wider">Đến ngày</label>
+                                <input type="text" id="luu_tru_den" name="luu_tru_den" class="mt-1 block w-full border border-blue-200 rounded-lg p-2" value="31/12/2025">
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button type="button" id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition font-bold">
+                                Hủy
+                            </button>
+                            <button type="button" id="submitBtn" onclick="saveGuest()" class="flex-[2] bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-bold shadow-md shadow-blue-100 flex justify-center items-center">
+                                <i class="fa-solid fa-user-plus mr-2"></i><span id="submitBtnText">Thêm vào danh sách</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-fit">
+                    <div class="p-5 border-b bg-white flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-gray-800">
+                            Danh sách chờ gửi 
+                            <span id="count" class="ml-2 px-2.5 py-0.5 bg-blue-100 text-blue-600 rounded-full text-sm font-bold">0</span>
+                        </h2>
+                        <button onclick="clearAll()" class="text-gray-400 hover:text-red-500 transition text-sm font-bold flex items-center">
+                            <i class="fa-solid fa-trash-can mr-2"></i>Xóa sạch
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Khách hàng</th>
+                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Phòng</th>
+                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guestTable" class="divide-y divide-gray-100 bg-white">
+                                <tr id="emptyRow">
+                                    <td colspan="3" class="px-6 py-12 text-center text-gray-400">
+                                        <i class="fa-solid fa-inbox text-4xl mb-3 block opacity-20"></i>
+                                        Chưa có dữ liệu.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -162,9 +179,10 @@
     <script>
         let guestList = [];
 
-        function addToTable() {
+        function saveGuest() {
             const form = document.getElementById('guestForm');
             const formData = new FormData(form);
+            const editIndex = parseInt(document.getElementById('editIndex').value);
             
             if(!formData.get('ho_ten') || !formData.get('cccd')) return;
 
@@ -187,9 +205,56 @@
                 luu_tru_den: formData.get('luu_tru_den')
             };
 
-            guestList.push(guest);
+            if (editIndex > -1) {
+                guestList[editIndex] = guest;
+                cancelEdit();
+            } else {
+                guestList.push(guest);
+                resetFormFields();
+            }
             renderTable();
-            // Reset fields but keep address/reason defaults
+        }
+
+        function editGuest(index) {
+            const guest = guestList[index];
+            document.getElementById('editIndex').value = index;
+            
+            // Fill fields
+            document.getElementById('ho_ten').value = guest.ho_ten;
+            document.getElementById('cccd').value = guest.cccd;
+            document.getElementById('ngay_birth').value = guest.ngay_birth;
+            document.getElementById('gioi_tinh').value = guest.gioi_tinh;
+            document.getElementById('so_phong').value = guest.so_phong;
+            document.getElementById('dan_toc').value = guest.dan_toc;
+            document.getElementById('quoc_tich').value = guest.quoc_tich;
+            document.getElementById('nghe_nghiep').value = guest.nghe_nghiep;
+            document.getElementById('noi_lam_viec').value = guest.noi_lam_viec;
+            document.getElementById('tinh').value = guest.tinh;
+            document.getElementById('xa').value = guest.xa;
+            document.getElementById('dia_chi_chi_tiet').value = guest.dia_chi_chi_tiet;
+            document.getElementById('ly_do').value = guest.ly_do;
+            document.getElementById('thoi_gian_luu_tru').value = guest.thoi_gian_luu_tru;
+            document.getElementById('luu_tru_den').value = guest.luu_tru_den;
+
+            // UI Edit Mode
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square mr-2 text-amber-500"></i>Chỉnh sửa thông tin`;
+            document.getElementById('submitBtnText').innerText = "Cập nhật thay đổi";
+            document.getElementById('submitBtn').classList.replace('bg-blue-600', 'bg-amber-600');
+            document.getElementById('submitBtn').classList.replace('hover:bg-blue-700', 'hover:bg-amber-700');
+            document.getElementById('btnCancelEdit').classList.remove('hidden');
+        }
+
+        function cancelEdit() {
+            document.getElementById('editIndex').value = "-1";
+            resetFormFields();
+            document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-user-plus mr-2 text-blue-600"></i>Thông tin chi tiết khách`;
+            document.getElementById('submitBtnText').innerText = "Thêm vào danh sách";
+            document.getElementById('submitBtn').classList.replace('bg-amber-600', 'bg-blue-600');
+            document.getElementById('submitBtn').classList.replace('hover:bg-amber-700', 'hover:bg-blue-700');
+            document.getElementById('btnCancelEdit').classList.add('hidden');
+        }
+
+        function resetFormFields() {
             document.getElementById('ho_ten').value = '';
             document.getElementById('cccd').value = '';
             document.getElementById('ngay_birth').value = '';
@@ -206,16 +271,21 @@
                 tableBody.innerHTML = '';
                 guestList.forEach((g, index) => {
                     tableBody.innerHTML += `
-                        <tr class="hover:bg-blue-50 transition border-l-4 border-transparent hover:border-blue-500">
+                        <tr id="row-${index}" class="hover:bg-blue-50 transition border-l-4 border-transparent hover:border-blue-500">
                             <td class="px-4 py-3">
                                 <div class="font-bold text-gray-900">${g.ho_ten}</div>
-                                <div class="text-xs text-gray-400 font-mono">${g.cccd} | ${g.ngay_birth}</div>
+                                <div class="text-xs text-gray-400 font-mono font-medium">${g.cccd} | ${g.ngay_birth}</div>
                             </td>
                             <td class="px-4 py-3 text-center text-gray-600 font-bold">${g.so_phong}</td>
                             <td class="px-4 py-3 text-center">
-                                <button onclick="removeGuest(${index})" class="text-red-400 hover:text-red-600">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                <div class="flex justify-center gap-3">
+                                    <button onclick="editGuest(${index})" class="text-amber-500 hover:text-amber-700 p-2" title="Chỉnh sửa">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="removeGuest(${index})" class="text-red-400 hover:text-red-600 p-2" title="Xóa">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>`;
                 });
@@ -224,12 +294,14 @@
         }
 
         function removeGuest(index) {
-            guestList.splice(index, 1);
-            renderTable();
+            if(confirm("Xóa khách này khỏi danh sách?")) {
+                guestList.splice(index, 1);
+                renderTable();
+            }
         }
 
         function clearAll() {
-            if(confirm("Xóa toàn bộ?")) {
+            if(confirm("Bạn có chắc chắn muốn xóa toàn bộ danh sách?")) {
                 guestList = [];
                 renderTable();
             }
@@ -240,7 +312,7 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({items: guestList}, null, 2));
             const dlAnchor = document.createElement('a');
             dlAnchor.setAttribute("href", dataStr);
-            dlAnchor.setAttribute("download", `data_luutru_${new Date().getTime()}.json`);
+            dlAnchor.setAttribute("download", `data_${new Date().getTime()}.json`);
             dlAnchor.click();
         }
 
@@ -255,7 +327,7 @@
                         guestList = [...guestList, ...data.items];
                         renderTable();
                     }
-                } catch (err) { alert("Lỗi JSON!"); }
+                } catch (err) { alert("Lỗi tệp JSON không hợp lệ!"); }
             };
             reader.readAsText(file);
         }
@@ -275,12 +347,32 @@
                 const result = await response.json();
                 alert("THÀNH CÔNG: " + result.message);
             } catch (error) {
-                alert("LỖI: Kiểm tra browser.py!");
+                alert("LỖI: Không thể kết nối với server Python (browser.py)!");
             } finally {
                 btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-2"></i>GỬI ĐẾN TRÌNH DUYỆT`;
                 btn.disabled = false;
             }
         }
+
+        const ws = new WebSocket("ws://127.0.0.1:8000/ws");
+        ws.onopen = () => console.log("WebSocket: Connected");
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                const row = document.getElementById(`row-${data.index}`);
+                if (!row) return;
+
+                row.classList.remove('bg-yellow-50', 'bg-green-100', 'bg-red-100', 'border-yellow-500', 'border-green-500', 'border-red-500');
+                
+                if (data.type === 'PROCESSING') {
+                    row.classList.add('bg-yellow-50', 'border-yellow-500');
+                } else if (data.type === 'COMPLETED') {
+                    row.classList.add('bg-green-100', 'border-green-500');
+                } else if (data.type === 'ERROR') {
+                    row.classList.add('bg-red-100', 'border-red-500');
+                }
+            } catch (e) { console.error("WS Error:", e); }
+        };
     </script>
 </body>
 </html>
