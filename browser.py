@@ -205,6 +205,18 @@ async def fill_guest_data(data):
         await shared_page.wait_for_selector(btn_addu, state="visible")
         await shared_page.click(btn_addu)
 
+        # --- TỰ ĐỘNG MỞ LẠI FORM CHO KHÁCH TIẾP THEO ---
+        await asyncio.sleep(2) # Đợi lưu xong và modal đóng
+        print("[BƯỚC 2] Mở form thêm người...")
+        btn_add = "a#btnAddPersonLT" 
+        await shared_page.wait_for_selector(btn_add, state="visible")
+        await shared_page.click(btn_add)
+        
+        # Chờ modal hiện lên
+        await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=10000)
+        await asyncio.sleep(1)
+        print("[OK] Sẵn sàng nhận dữ liệu khách.")
+
     except Exception as e:
         print(f"[LỖI] Nhập liệu khách hàng thất bại: {e}")
 
