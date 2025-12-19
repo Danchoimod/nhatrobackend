@@ -9,6 +9,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        /* Animation cho trạng thái đang chạy */
+        @keyframes pulse-border {
+            0%, 100% { border-color: #eab308; }
+            50% { border-color: #fca5a5; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -156,14 +161,15 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase w-10">#</th>
                                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Khách hàng</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Phòng</th>
+                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Trạng thái</th>
                                     <th class="px-4 py-3 text-center text-xs font-bold text-gray-400 uppercase">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="guestTable" class="divide-y divide-gray-100 bg-white">
                                 <tr id="emptyRow">
-                                    <td colspan="3" class="px-6 py-12 text-center text-gray-400">
+                                    <td colspan="4" class="px-6 py-12 text-center text-gray-400">
                                         <i class="fa-solid fa-inbox text-4xl mb-3 block opacity-20"></i>
                                         Chưa có dữ liệu.
                                     </td>
@@ -202,7 +208,8 @@
                 ly_do: formData.get('ly_do'),
                 dia_chi_chi_tiet: formData.get('dia_chi_chi_tiet').trim(),
                 thoi_gian_luu_tru: formData.get('thoi_gian_luu_tru'),
-                luu_tru_den: formData.get('luu_tru_den')
+                luu_tru_den: formData.get('luu_tru_den'),
+                status: 'PENDING' // Trạng thái mặc định
             };
 
             if (editIndex > -1) {
@@ -219,7 +226,7 @@
             const guest = guestList[index];
             document.getElementById('editIndex').value = index;
             
-            // Fill fields
+            // Fill form inputs (giữ nguyên logic cũ)
             document.getElementById('ho_ten').value = guest.ho_ten;
             document.getElementById('cccd').value = guest.cccd;
             document.getElementById('ngay_birth').value = guest.ngay_birth;
@@ -236,7 +243,6 @@
             document.getElementById('thoi_gian_luu_tru').value = guest.thoi_gian_luu_tru;
             document.getElementById('luu_tru_den').value = guest.luu_tru_den;
 
-            // UI Edit Mode
             document.getElementById('formTitle').innerHTML = `<i class="fa-solid fa-pen-to-square mr-2 text-amber-500"></i>Chỉnh sửa thông tin`;
             document.getElementById('submitBtnText').innerText = "Cập nhật thay đổi";
             document.getElementById('submitBtn').classList.replace('bg-blue-600', 'bg-amber-600');
@@ -266,17 +272,35 @@
             const countEl = document.getElementById('count');
             
             if (guestList.length === 0) {
-                tableBody.innerHTML = `<tr id="emptyRow"><td colspan="3" class="px-6 py-12 text-center text-gray-400 italic">Trống.</td></tr>`;
+                tableBody.innerHTML = `<tr id="emptyRow"><td colspan="4" class="px-6 py-12 text-center text-gray-400 italic">Trống.</td></tr>`;
             } else {
                 tableBody.innerHTML = '';
                 guestList.forEach((g, index) => {
+                    let statusHtml = `<span class="text-gray-400 text-xs font-medium"><i class="fa-regular fa-clock mr-1"></i>Chờ gửi</span>`;
+                    let rowClass = `hover:bg-blue-50 transition border-l-4 border-transparent`; // Class mặc định
+
+                    // Giữ lại trạng thái nếu render lại (ví dụ khi sửa user khác)
+                    if (g.status === 'PROCESSING') {
+                        statusHtml = `<span class="text-yellow-600 text-xs font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang chạy...</span>`;
+                        rowClass = `bg-yellow-50 border-l-4 border-yellow-500`;
+                    } else if (g.status === 'COMPLETED') {
+                        statusHtml = `<span class="text-green-600 text-xs font-bold"><i class="fa-solid fa-check-circle mr-1"></i>Thành công</span>`;
+                        rowClass = `bg-green-50 border-l-4 border-green-500`;
+                    } else if (g.status === 'ERROR') {
+                        statusHtml = `<span class="text-red-500 text-xs font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Lỗi (Đã bỏ qua)</span>`;
+                        rowClass = `bg-red-50 border-l-4 border-red-500`;
+                    }
+
                     tableBody.innerHTML += `
-                        <tr id="row-${index}" class="hover:bg-blue-50 transition border-l-4 border-transparent hover:border-blue-500">
+                        <tr id="row-${index}" class="${rowClass}">
+                            <td class="px-4 py-3 text-gray-400 font-mono text-xs">${index + 1}</td>
                             <td class="px-4 py-3">
                                 <div class="font-bold text-gray-900">${g.ho_ten}</div>
                                 <div class="text-xs text-gray-400 font-mono font-medium">${g.cccd} | ${g.ngay_birth}</div>
                             </td>
-                            <td class="px-4 py-3 text-center text-gray-600 font-bold">${g.so_phong}</td>
+                            <td class="px-4 py-3 text-center" id="status-cell-${index}">
+                                ${statusHtml}
+                            </td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex justify-center gap-3">
                                     <button onclick="editGuest(${index})" class="text-amber-500 hover:text-amber-700 p-2" title="Chỉnh sửa">
@@ -338,6 +362,10 @@
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ĐANG GỬI...`;
             btn.disabled = true;
 
+            // Reset status visual
+            guestList.forEach(g => g.status = 'PENDING');
+            renderTable();
+
             try {
                 const response = await fetch('http://127.0.0.1:8000/send-to-web', {
                     method: 'POST',
@@ -345,7 +373,8 @@
                     body: JSON.stringify({ items: guestList })
                 });
                 const result = await response.json();
-                alert("THÀNH CÔNG: " + result.message);
+                // Không alert nữa để không chặn luồng
+                console.log("Server response:", result.message);
             } catch (error) {
                 alert("LỖI: Không thể kết nối với server Python (browser.py)!");
             } finally {
@@ -354,22 +383,37 @@
             }
         }
 
+        // --- XỬ LÝ WEBSOCKET HIỂN THỊ TRẠNG THÁI ---
         const ws = new WebSocket("ws://127.0.0.1:8000/ws");
         ws.onopen = () => console.log("WebSocket: Connected");
+        
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                const row = document.getElementById(`row-${data.index}`);
+                const index = data.index;
+                const row = document.getElementById(`row-${index}`);
+                const statusCell = document.getElementById(`status-cell-${index}`);
+                
+                // Cập nhật dữ liệu gốc để không bị mất khi render lại
+                if (guestList[index]) {
+                    guestList[index].status = data.type;
+                }
+
                 if (!row) return;
 
-                row.classList.remove('bg-yellow-50', 'bg-green-100', 'bg-red-100', 'border-yellow-500', 'border-green-500', 'border-red-500');
+                // 1. Reset class cũ (QUAN TRỌNG: Xóa border-transparent)
+                row.className = ""; 
                 
+                // 2. Thêm class mới dựa trên trạng thái
                 if (data.type === 'PROCESSING') {
-                    row.classList.add('bg-yellow-50', 'border-yellow-500');
+                    row.className = "bg-yellow-50 border-l-4 border-yellow-500 transition";
+                    if(statusCell) statusCell.innerHTML = `<span class="text-yellow-600 text-xs font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang chạy...</span>`;
                 } else if (data.type === 'COMPLETED') {
-                    row.classList.add('bg-green-100', 'border-green-500');
+                    row.className = "bg-green-50 border-l-4 border-green-500 transition";
+                    if(statusCell) statusCell.innerHTML = `<span class="text-green-600 text-xs font-bold"><i class="fa-solid fa-check-circle mr-1"></i>Thành công</span>`;
                 } else if (data.type === 'ERROR') {
-                    row.classList.add('bg-red-100', 'border-red-500');
+                    row.className = "bg-red-50 border-l-4 border-red-500 transition";
+                    if(statusCell) statusCell.innerHTML = `<span class="text-red-500 text-xs font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Lỗi (Đã bỏ qua)</span>`;
                 }
             } catch (e) { console.error("WS Error:", e); }
         };
