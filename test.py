@@ -307,8 +307,8 @@ async def send_current_qr_to_new_client():
         current_url = shared_page.url
         print(f"[NEW CLIENT] Client mới kết nối, URL hiện tại: {current_url}")
         
-        # Kiểm tra xem có đang ở trang login không
-        if "dichvucong.bocongan.gov.vn" in current_url:
+        # Kiểm tra xem có đang ở trang login không (cả trang chính và trang VNeID SSO)
+        if "dichvucong.bocongan.gov.vn" in current_url or "sso.dancuquocgia.gov.vn" in current_url:
             # Kiểm tra xem đã đăng nhập chưa
             try:
                 await shared_page.wait_for_selector("select#accomStay_cboPROVINCE_ID", timeout=1000)
@@ -455,8 +455,8 @@ async def resend_qr_code():
         current_url = shared_page.url
         print(f"[QR REFRESH] Frontend yêu cầu QR, URL hiện tại: {current_url}")
         
-        # Kiểm tra xem có đang ở trang login không
-        if "dichvucong.bocongan.gov.vn" in current_url:
+        # Kiểm tra xem có đang ở trang login không (cả trang chính và trang VNeID SSO)
+        if "dichvucong.bocongan.gov.vn" in current_url or "sso.dancuquocgia.gov.vn" in current_url:
             # Kiểm tra xem đã đăng nhập chưa
             try:
                 await shared_page.wait_for_selector("select#accomStay_cboPROVINCE_ID", timeout=2000)
@@ -539,7 +539,13 @@ async def resend_qr_code():
                 return
             
             # BƯỚC 3: Nếu QR hết hạn hoặc không có QR -> click nút reload
-            print("[QR REFRESH] 🔄 Cần lấy QR mới...")
+            if qr_image_base64 and qr_expired:
+                print("[QR REFRESH] 🔄 QR đã hết hạn, cần lấy QR mới...")
+            elif not qr_image_base64:
+                print("[QR REFRESH] ⚠️ KHÔNG TÌM THẤY QR hiện tại trên trang!")
+                print(f"[QR REFRESH] URL hiện tại: {shared_page.url}")
+            else:
+                print("[QR REFRESH] 🔄 Cần tải QR mới...")
             
             # Tìm nút "Tải lại" trên website (khi QR hết hạn)
             reload_button_selectors = [
