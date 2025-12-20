@@ -307,10 +307,19 @@ async def send_current_qr_to_new_client():
         current_url = shared_page.url
         print(f"[NEW CLIENT] Client mới kết nối, URL hiện tại: {current_url}")
         
+        if "portal/p/home/thong-bao-luu-tru.html?ma_thu_tuc=2.001159" in current_url:
+            print("vailone")
+            await manager.broadcast({"type": "LOGIN_SUCCESS"})
+            return
         # Kiểm tra xem có đang ở trang login không (cả trang chính và trang VNeID SSO)
         if "dichvucong.bocongan.gov.vn" in current_url or "sso.dancuquocgia.gov.vn" in current_url:
-            # Kiểm tra xem đã đăng nhập chưa
+            # Kiểm tra xem đã đăng nhập chưa (kiểm tra cả URL và element)
             try:
+                # Nếu đã vào trang công dân - chứng tỏ đã auth thành công
+                if "portal/p/home/thong-bao-luu-tru.html?ma_thu_tuc=2.001159" in current_url:
+                    print("[NEW CLIENT] Đã đăng nhập (tại trang công dân), gửi LOGIN_SUCCESS")
+                    await manager.broadcast({"type": "LOGIN_SUCCESS"})
+                    return    
                 await shared_page.wait_for_selector("select#accomStay_cboPROVINCE_ID", timeout=1000)
                 print("[NEW CLIENT] Đã đăng nhập, gửi LOGIN_SUCCESS")
                 await manager.broadcast({"type": "LOGIN_SUCCESS"})
@@ -457,8 +466,14 @@ async def resend_qr_code():
         
         # Kiểm tra xem có đang ở trang login không (cả trang chính và trang VNeID SSO)
         if "dichvucong.bocongan.gov.vn" in current_url or "sso.dancuquocgia.gov.vn" in current_url:
-            # Kiểm tra xem đã đăng nhập chưa
+            # Kiểm tra xem đã đăng nhập chưa (kiểm tra cả URL và element)
             try:
+                # Nếu đã vào trang công dân - chứng tỏ đã auth thành công
+                if "dich-vu-cong/cong-dan" in current_url:
+                    print("[QR REFRESH] Đã đăng nhập (tại trang công dân), không cần QR")
+                    await manager.broadcast({"type": "LOGIN_SUCCESS"})
+                    return
+                    
                 await shared_page.wait_for_selector("select#accomStay_cboPROVINCE_ID", timeout=2000)
                 print("[QR REFRESH] Đã đăng nhập rồi, không cần QR")
                 await manager.broadcast({"type": "LOGIN_SUCCESS"})
@@ -611,6 +626,24 @@ async def wait_for_login_success():
         # Kiểm tra URL mỗi 2 giây
         for _ in range(60):  # Đợi tối đa 2 phút
             current_url = shared_page.url
+            
+            # Nếu đã vào trang công dân - chứng tỏ đã auth thành công NGAY LẬP TỨC
+            if "dich-vu-cong/cong-dan" in current_url:
+                print("[AUTH] ✅ Đã vào trang công dân - Đăng nhập thành công!")
+                
+                # Gửi thông báo đến frontend NGAY
+                await manager.broadcast({
+                    "type": "LOGIN_SUCCESS"
+                })
+                
+                # Đợi 2 giây để frontend chuyển trang
+                await asyncio.sleep(2)
+                
+                # Chuyển đến trang form và setup
+                await shared_page.goto(target_url)
+                await shared_page.wait_for_load_state("networkidle")
+                await auto_fill_location_and_open_form()
+                return True
             
             # Nếu URL chứa home=1 hoặc đã về trang đích
             if "home=1" in current_url or current_url == target_url:

@@ -178,6 +178,14 @@
             
             ws.onopen = () => {
                 console.log("✅ WebSocket: Connected to authentication server");
+                
+                // Sau khi connect, đợi 1 giây để nhận response từ backend
+                // Nếu đã auth rồi, backend sẽ tự động gửi LOGIN_SUCCESS
+                setTimeout(() => {
+                    // Nếu sau 3 giây vẫn chưa nhận được gì (không có QR và không có LOGIN_SUCCESS)
+                    // Có thể đã auth rồi nhưng backend chưa kịp gửi, hoặc đang loading
+                    console.log("⏳ Đang chờ phản hồi từ server...");
+                }, 1000);
             };
             
             ws.onerror = (error) => {
@@ -206,9 +214,10 @@
                     } else if (data.type === 'LOGIN_SUCCESS') {
                         console.log("✅ Login successful, redirecting...");
                         showSuccess();
+                        // Chuyển trang ngay lập tức, không cần đợi
                         setTimeout(() => {
                             window.location.href = 'main.html';
-                        }, 2000);
+                        }, 1500); // Giảm xuống 1.5s để nhanh hơn
                     }
                 } catch (e) {
                     console.error("Parse error:", e);
