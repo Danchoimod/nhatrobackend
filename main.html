@@ -9,11 +9,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        /* Animation cho trạng thái đang chạy */
-        @keyframes pulse-border {
-            0%, 100% { border-color: #eab308; }
-            50% { border-color: #fca5a5; }
-        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -209,7 +204,7 @@
                 dia_chi_chi_tiet: formData.get('dia_chi_chi_tiet').trim(),
                 thoi_gian_luu_tru: formData.get('thoi_gian_luu_tru'),
                 luu_tru_den: formData.get('luu_tru_den'),
-                status: 'PENDING' // Trạng thái mặc định
+                status: 'PENDING'
             };
 
             if (editIndex > -1) {
@@ -226,7 +221,6 @@
             const guest = guestList[index];
             document.getElementById('editIndex').value = index;
             
-            // Fill form inputs (giữ nguyên logic cũ)
             document.getElementById('ho_ten').value = guest.ho_ten;
             document.getElementById('cccd').value = guest.cccd;
             document.getElementById('ngay_birth').value = guest.ngay_birth;
@@ -277,9 +271,8 @@
                 tableBody.innerHTML = '';
                 guestList.forEach((g, index) => {
                     let statusHtml = `<span class="text-gray-400 text-xs font-medium"><i class="fa-regular fa-clock mr-1"></i>Chờ gửi</span>`;
-                    let rowClass = `hover:bg-blue-50 transition border-l-4 border-transparent`; // Class mặc định
+                    let rowClass = `hover:bg-blue-50 transition border-l-4 border-transparent`;
 
-                    // Giữ lại trạng thái nếu render lại (ví dụ khi sửa user khác)
                     if (g.status === 'PROCESSING') {
                         statusHtml = `<span class="text-yellow-600 text-xs font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang chạy...</span>`;
                         rowClass = `bg-yellow-50 border-l-4 border-yellow-500`;
@@ -362,7 +355,6 @@
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ĐANG GỬI...`;
             btn.disabled = true;
 
-            // Reset status visual
             guestList.forEach(g => g.status = 'PENDING');
             renderTable();
 
@@ -373,7 +365,6 @@
                     body: JSON.stringify({ items: guestList })
                 });
                 const result = await response.json();
-                // Không alert nữa để không chặn luồng
                 console.log("Server response:", result.message);
             } catch (error) {
                 alert("LỖI: Không thể kết nối với server Python (browser.py)!");
@@ -383,31 +374,35 @@
             }
         }
 
-        // --- XỬ LÝ WEBSOCKET HIỂN THỊ TRẠNG THÁI ---
+        // WEBSOCKET - Chỉ nhận status updates
         const ws = new WebSocket("ws://127.0.0.1:8000/ws");
-        ws.onopen = () => console.log("WebSocket: Connected");
+        ws.onopen = () => console.log("✅ WebSocket: Connected");
+        ws.onerror = (error) => console.error("❌ WebSocket error:", error);
+        ws.onclose = () => console.warn("⚠️ WebSocket: Connection closed");
         
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                
+                // Bỏ qua QR_CODE messages (chỉ dành cho login page)
+                if (data.type === 'QR_CODE') return;
+                
+                // Xử lý trạng thái processing/completed/error
                 const index = data.index;
                 const row = document.getElementById(`row-${index}`);
                 const statusCell = document.getElementById(`status-cell-${index}`);
                 
-                // Cập nhật dữ liệu gốc để không bị mất khi render lại
                 if (guestList[index]) {
                     guestList[index].status = data.type;
                 }
 
                 if (!row) return;
 
-                // 1. Reset class cũ (QUAN TRỌNG: Xóa border-transparent)
-                row.className = ""; 
+                row.className = "";
                 
-                // 2. Thêm class mới dựa trên trạng thái
                 if (data.type === 'PROCESSING') {
                     row.className = "bg-yellow-50 border-l-4 border-yellow-500 transition";
-                    if(statusCell) statusCell.innerHTML =   `<span class="text-yellow-600 text-xs font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang chạy...</span>`;
+                    if(statusCell) statusCell.innerHTML = `<span class="text-yellow-600 text-xs font-bold animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang chạy...</span>`;
                 } else if (data.type === 'COMPLETED') {
                     row.className = "bg-green-50 border-l-4 border-green-500 transition";
                     if(statusCell) statusCell.innerHTML = `<span class="text-green-600 text-xs font-bold"><i class="fa-solid fa-check-circle mr-1"></i>Thành công</span>`;

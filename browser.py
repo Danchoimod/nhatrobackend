@@ -248,8 +248,28 @@ async def main():
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             shared_page = context.pages[0] if context.pages else await context.new_page()
             print("[HỆ THỐNG] Đã kết nối Chrome.")
-            await shared_page.goto("https://dichvucong.bocongan.gov.vn/")
-            asyncio.create_task(check_url_and_redirect())
+            await shared_page.goto("https://dichvucong.bocongan.gov.vn/bo-cong-an/tiep-nhan-online/chon-truong-hop-ho-so?ma-thu-tuc-public=26346")
+            
+            # Đợi trang load xong và kiểm tra button đăng nhập
+            await shared_page.wait_for_load_state("networkidle")
+            print("[KIỂM TRA] Đang tìm button đăng nhập Định danh điện tử...")
+            
+            try:
+                # Kiểm tra xem button có tồn tại không
+                login_button = await shared_page.wait_for_selector(
+                    "div.login-IDP.BCA[onclick*='handleNoDomain']",
+                    state="visible",
+                    timeout=5000
+                )
+                if login_button:
+                    print("[THÀNH CÔNG] Tìm thấy button đăng nhập, đang click...")
+                    await login_button.click()
+                    await asyncio.sleep(2)
+                    print("[OK] Đã click vào button Định danh điện tử")
+            except Exception as e:
+                print(f"[CẢNH BÁO] Không tìm thấy button đăng nhập hoặc đã đăng nhập rồi: {e}")
+            
+            # asyncio.create_task(check_url_and_redirect())
             config = uvicorn.Config(app, host="127.0.0.1", port=8000, loop="asyncio")
             server = uvicorn.Server(config)
             await server.serve()

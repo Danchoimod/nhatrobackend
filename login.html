@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ thống Lưu trú</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+        }
+        .qr-container {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen flex items-center justify-center">
+    
+    <div class="max-w-md w-full mx-4">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+                <i class="fa-solid fa-hotel text-white text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Hệ Thống Nhập Liệu Lưu Trú</h1>
+            <p class="text-gray-500 text-sm">Đăng nhập bằng VNeID để tiếp tục</p>
+        </div>
+
+        <!-- QR Card -->
+        <div class="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100">
+            <div id="loadingState" class="text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                    <i class="fa-solid fa-spinner fa-spin text-blue-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Đang tải mã QR...</h3>
+                <p class="text-gray-500 text-sm">Vui lòng chờ trong giây lát</p>
+            </div>
+
+            <div id="qrState" class="hidden text-center">
+                <div class="mb-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
+                        <i class="fa-solid fa-qrcode text-blue-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Quét mã QR để đăng nhập</h3>
+                    <p class="text-gray-600 text-sm mb-6">Mở ứng dụng <span class="font-bold text-blue-600">VNeID</span> và quét mã bên dưới</p>
+                </div>
+                
+                <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-2xl inline-block qr-container relative">
+                    <img id="qrImage" src="" alt="QR Code" class="w-64 h-64 mx-auto rounded-xl">
+                    
+                    <!-- Overlay "Tải lại" khi QR hết hạn -->
+                    <div id="qrExpiredOverlay" class="hidden absolute inset-0 bg-black bg-opacity-60 rounded-2xl flex items-center justify-center">
+                        <button onclick="retryGetQR()" class="flex items-center justify-center h-11 px-6 rounded-lg bg-red-500 hover:bg-red-600 font-bold text-white transition shadow-lg transform active:scale-95">
+                            <svg class="h-5 w-5 mr-2" viewBox="0 0 489.698 489.698" xmlns="http://www.w3.org/2000/svg">
+                                <g>
+                                    <path fill="white" d="M468.999,227.774c-11.4,0-20.8,8.3-20.8,19.8c-1,74.9-44.2,142.6-110.3,178.9c-99.6,54.7-216,5.6-260.6-61l62.9,13.1 c10.4,2.1,21.8-4.2,23.9-15.6c2.1-10.4-4.2-21.8-15.6-23.9l-123.7-26c-7.2-1.7-26.1,3.5-23.9,22.9l15.6,124.8 c1,10.4,9.4,17.7,19.8,17.7c15.5,0,21.8-11.4,20.8-22.9l-7.3-60.9c101.1,121.3,229.4,104.4,306.8,69.3 c80.1-42.7,131.1-124.8,132.1-215.4C488.799,237.174,480.399,227.774,468.999,227.774z"/>
+                                    <path fill="white" d="M20.599,261.874c11.4,0,20.8-8.3,20.8-19.8c1-74.9,44.2-142.6,110.3-178.9c99.6-54.7,216-5.6,260.6,61l-62.9-13.1 c-10.4-2.1-21.8,4.2-23.9,15.6c-2.1,10.4,4.2,21.8,15.6,23.9l123.8,26c7.2,1.7,26.1-3.5,23.9-22.9l-15.6-124.8 c-1-10.4-9.4-17.7-19.8-17.7c-15.5,0-21.8,11.4-20.8,22.9l7.2,60.9c-101.1-121.2-229.4-104.4-306.8-69.2 c-80.1,42.6-131.1,124.8-132.2,215.3C0.799,252.574,9.199,261.874,20.599,261.874z"/>
+                                </g>
+                            </svg>
+                            Tải lại
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <p class="text-xs text-gray-400 flex items-center justify-center">
+                        <i class="fa-solid fa-shield-halved mr-2"></i>
+                        Kết nối an toàn qua WebSocket
+                    </p>
+                </div>
+            </div>
+
+            <div id="errorState" class="hidden text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                    <i class="fa-solid fa-triangle-exclamation text-red-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Không thể tải mã QR</h3>
+                <p class="text-gray-500 text-sm mb-4">Vui lòng kiểm tra kết nối và thử lại</p>
+                <button onclick="retryGetQR()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition">
+                    <i class="fa-solid fa-rotate-right mr-2"></i>Thử lại
+                </button>
+            </div>
+
+            <div id="successState" class="hidden text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                    <i class="fa-solid fa-check-circle text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Đăng nhập thành công!</h3>
+                <p class="text-gray-500 text-sm mb-4">Đang chuyển đến hệ thống...</p>
+                <div class="flex justify-center">
+                    <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-6">
+            <p class="text-xs text-gray-400">
+                Được cung cấp bởi <span class="font-bold">Bộ Công An Việt Nam</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let qrReceived = false;
+
+        function showLoading() {
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('qrState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('successState').classList.add('hidden');
+        }
+
+        function showQR(base64Image) {
+            document.getElementById('qrImage').src = base64Image;
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('qrState').classList.remove('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('successState').classList.add('hidden');
+            document.getElementById('qrExpiredOverlay').classList.add('hidden'); // Ẩn overlay khi có QR mới
+            qrReceived = true;
+        }
+
+        function showQRExpired() {
+            console.log("⚠️ QR đã hết hạn, hiển thị nút Tải lại");
+            document.getElementById('qrExpiredOverlay').classList.remove('hidden');
+        }
+
+        function showError() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('qrState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('successState').classList.add('hidden');
+        }
+
+        function retryGetQR() {
+            console.log("🔄 Yêu cầu lấy lại QR code...");
+            showLoading();
+            qrReceived = false;
+            
+            // Gửi yêu cầu QR mới qua WebSocket
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'REQUEST_QR' }));
+                console.log("📤 Đã gửi yêu cầu REQUEST_QR");
+            } else {
+                // Nếu WebSocket đóng, reconnect
+                console.log("🔌 WebSocket đã đóng, đang kết nối lại...");
+                connectWebSocket();
+                setTimeout(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ action: 'REQUEST_QR' }));
+                    }
+                }, 1000);
+            }
+            
+            // Timeout nếu không nhận được QR sau 10 giây
+            setTimeout(() => {
+                if (!qrReceived) {
+                    showError();
+                }
+            }, 10000);
+        }
+
+        function showSuccess() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('qrState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('successState').classList.remove('hidden');
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket("ws://127.0.0.1:8000/ws");
+            
+            ws.onopen = () => {
+                console.log("✅ WebSocket: Connected to authentication server");
+            };
+            
+            ws.onerror = (error) => {
+                console.error("❌ WebSocket error:", error);
+                if (!qrReceived) {
+                    setTimeout(() => showError(), 5000);
+                }
+            };
+            
+            ws.onclose = () => {
+                console.warn("⚠️ WebSocket: Connection closed");
+            };
+            
+            ws.onmessage = (event) => {
+                console.log("📩 Received message:", event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("📦 Parsed data:", data);
+                    
+                    if (data.type === 'QR_CODE') {
+                        console.log("🔑 Received QR code");
+                        showQR(data.data);
+                    } else if (data.type === 'QR_EXPIRED') {
+                        console.log("⏰ QR code expired");
+                        showQRExpired();
+                    } else if (data.type === 'LOGIN_SUCCESS') {
+                        console.log("✅ Login successful, redirecting...");
+                        showSuccess();
+                        setTimeout(() => {
+                            window.location.href = 'main.html';
+                        }, 2000);
+                    }
+                } catch (e) {
+                    console.error("Parse error:", e);
+                }
+            };
+        }
+
+        // Timeout nếu không nhận được QR sau 10 giây
+        setTimeout(() => {
+            if (!qrReceived) {
+                showError();
+            }
+        }, 10000);
+
+        // Kết nối khi trang load
+        connectWebSocket();
+    </script>
+</body>
+</html>
