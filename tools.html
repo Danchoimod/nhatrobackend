@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Lưu Trú</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header Section -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-900 flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="text-blue-600 w-8 h-8"></i>
+                    Quản Lý Lưu Trú & Xuất Dữ Liệu
+                </h1>
+                <p class="text-slate-500 mt-1">Hỗ trợ đa định dạng: Excel (.xlsx) và JSON (.json)</p>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+                <button onclick="document.getElementById('fileInput').click()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-all shadow active:scale-95 font-medium text-sm">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    Nhập Excel
+                </button>
+                <button onclick="exportToExcel()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all shadow active:scale-95 font-medium text-sm">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Xuất Excel
+                </button>
+                <button onclick="exportToJson()" class="flex items-center gap-2 bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg transition-all shadow active:scale-95 font-medium text-sm">
+                    <i data-lucide="code" class="w-4 h-4"></i>
+                    Xuất JSON
+                </button>
+                <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls" onchange="importFromExcel(event)">
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                <div class="bg-blue-50 p-3 rounded-xl text-blue-600">
+                    <i data-lucide="plus" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">Tổng nhân khẩu</p>
+                    <p id="totalCount" class="text-2xl font-black text-slate-900">0</p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                <div class="bg-purple-50 p-3 rounded-xl text-purple-600">
+                    <i data-lucide="home" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">Số phòng sử dụng</p>
+                    <p id="roomCount" class="text-2xl font-black text-slate-900">0</p>
+                </div>
+            </div>
+
+            <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 flex items-start gap-3">
+                <i data-lucide="alert-circle" class="text-emerald-600 w-5 h-5 mt-1 shrink-0"></i>
+                <div>
+                    <p class="text-xs font-bold text-emerald-900 uppercase tracking-wider">Định dạng JSON</p>
+                    <p class="text-xs text-emerald-800 leading-relaxed">Dữ liệu JSON xuất ra tuân thủ cấu trúc đối tượng "items" chuẩn mẫu.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="relative w-full md:w-80">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5"></i>
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        placeholder="Tìm tên, CCCD hoặc số phòng..." 
+                        class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                        oninput="handleSearch()"
+                    >
+                </div>
+                <div id="resultStatus" class="text-xs text-slate-400 font-semibold uppercase">
+                    Đang hiển thị 0 kết quả
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[1000px]">
+                    <thead>
+                        <tr class="bg-slate-50">
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ tên & Phái</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">CCCD / Ngày sinh</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phòng</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nơi ở hiện tại</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lưu trú</th>
+                            <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100">
+                        <!-- Data rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            <div>HTML Export System v2.1</div>
+            <div>Cấu trúc JSON: { items: [...] }</div>
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu ban đầu
+        let items = [
+            {
+                "ho_ten": "TRẦN PHÚ PHÀM",
+                "cccd": "087206008853",
+                "ngay_birth": "29/09/2006",
+                "gioi_tinh": "Nam",
+                "quoc_gia": "Cộng hòa xã hội chủ nghĩa Việt Nam",
+                "quoc_tich": "Việt Nam",
+                "dan_toc": "Kinh",
+                "noi_lam_viec": "Tự do",
+                "nghe_nghiep": "Tự do",
+                "so_phong": "C11",
+                "tinh": "Tỉnh Đồng Tháp",
+                "xa": "Xã Tân Long",
+                "ly_do": "Đi học",
+                "dia_chi_chi_tiet": "Ấp Tân Thạnh",
+                "thoi_gian_luu_tru": "13/12/2025",
+                "luu_tru_den": "31/12/2025"
+            },
+            {
+                "ho_ten": "Nguyễn Trung Hiếu",
+                "cccd": "087206015276",
+                "ngay_birth": "06/09/2006",
+                "gioi_tinh": "Nam",
+                "quoc_gia": "Cộng hòa xã hội chủ nghĩa Việt Nam",
+                "quoc_tich": "Việt Nam",
+                "dan_toc": "Kinh",
+                "noi_lam_viec": "Tự do",
+                "nghe_nghiep": "Tự do",
+                "so_phong": "C09",
+                "tinh": "Tỉnh Đồng Tháp",
+                "xa": "Xã An Phong",
+                "ly_do": "Đi học",
+                "dia_chi_chi_tiet": "Ấp Ba",
+                "thoi_gian_luu_tru": "13/12/2025",
+                "luu_tru_den": "31/12/2025"
+            },
+            {
+                "ho_ten": "NGUYỄN XUÂN HUY",
+                "cccd": "087206003096",
+                "ngay_birth": "13/10/2006",
+                "gioi_tinh": "Nam",
+                "quoc_gia": "Cộng hòa xã hội chủ nghĩa Việt Nam",
+                "quoc_tich": "Việt Nam",
+                "dan_toc": "Kinh",
+                "noi_lam_viec": "Tự do",
+                "nghe_nghiep": "Tự do",
+                "so_phong": "C11",
+                "tinh": "Tỉnh Đồng Tháp",
+                "xa": "Xã Tân Long",
+                "ly_do": "Đi học",
+                "dia_chi_chi_tiet": "Ấp Tân Hội",
+                "thoi_gian_luu_tru": "13/12/2025",
+                "luu_tru_den": "31/12/2025"
+            }
+        ];
+
+        const columnMapping = {
+            "ho_ten": "Họ và Tên",
+            "cccd": "Số CCCD",
+            "ngay_birth": "Ngày sinh",
+            "gioi_tinh": "Giới tính",
+            "quoc_tich": "Quốc tịch",
+            "dan_toc": "Dân tộc",
+            "so_phong": "Phòng",
+            "xa": "Xã/Phường",
+            "tinh": "Tỉnh/Thành",
+            "ly_do": "Lý do",
+            "thoi_gian_luu_tru": "Từ ngày",
+            "luu_tru_den": "Đến ngày",
+            "dia_chi_chi_tiet": "Địa chỉ chi tiết",
+            "nghe_nghiep": "Nghề nghiệp",
+            "noi_lam_viec": "Nơi làm việc",
+            "quoc_gia": "Quốc gia"
+        };
+
+        function renderTable(data = items) {
+            const tableBody = document.getElementById('tableBody');
+            const totalCount = document.getElementById('totalCount');
+            const roomCount = document.getElementById('roomCount');
+            const resultStatus = document.getElementById('resultStatus');
+
+            tableBody.innerHTML = '';
+            
+            data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'group hover:bg-blue-50/30 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-900">${item.ho_ten}</div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${item.gioi_tinh} • ${item.dan_toc}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-mono text-slate-600 font-medium">${item.cccd}</div>
+                        <div class="text-[11px] text-slate-400">Sinh: ${item.ngay_birth}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="bg-slate-900 text-white px-2 py-0.5 rounded text-[11px] font-bold">
+                            ${item.so_phong}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-xs text-slate-700 font-medium">${item.xa}</div>
+                        <div class="text-[11px] text-slate-400">${item.tinh}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-[11px] font-bold text-slate-600">
+                            <span class="text-emerald-600">Vào: ${item.thoi_gian_luu_tru}</span>
+                            <br />
+                            <span class="text-rose-500">Ra: ${item.luu_tru_den}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <button onclick="deleteItem(${index})" class="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-20 text-center text-slate-400 italic">Không tìm thấy dữ liệu...</td></tr>`;
+            }
+
+            totalCount.innerText = items.length;
+            roomCount.innerText = new Set(items.map(i => i.so_phong)).size;
+            resultStatus.innerText = `Đang hiển thị ${data.length} kết quả`;
+            
+            lucide.createIcons();
+        }
+
+        function handleSearch() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = items.filter(item => 
+                item.ho_ten.toLowerCase().includes(term) ||
+                item.cccd.includes(term) ||
+                item.so_phong.toLowerCase().includes(term)
+            );
+            renderTable(filtered);
+        }
+
+        function deleteItem(index) {
+            items.splice(index, 1);
+            renderTable();
+        }
+
+        function exportToExcel() {
+            const exportData = items.map(item => {
+                const formatted = {};
+                Object.keys(columnMapping).forEach(key => {
+                    formatted[columnMapping[key]] = item[key] || '';
+                });
+                return formatted;
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachLuuTru");
+            XLSX.writeFile(workbook, `Danh_Sach_${Date.now()}.xlsx`);
+        }
+
+        function exportToJson() {
+            const dataToExport = { items: items };
+            const jsonString = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([jsonString], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `data_luu_tru_${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importFromExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const bstr = evt.target.result;
+                    const wb = XLSX.read(bstr, { type: 'binary' });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    const data = XLSX.utils.sheet_to_json(ws);
+
+                    const reverseMapping = Object.fromEntries(
+                        Object.entries(columnMapping).map(([k, v]) => [v, k])
+                    );
+
+                    const importedItems = data.map(row => {
+                        const item = {};
+                        Object.keys(row).forEach(colName => {
+                            const key = reverseMapping[colName];
+                            if (key) item[key] = row[colName];
+                        });
+                        return item;
+                    });
+
+                    if (importedItems.length > 0) {
+                        items = [...items, ...importedItems];
+                        renderTable();
+                    }
+                } catch (err) {
+                    console.error("Lỗi Import:", err);
+                }
+                e.target.value = null;
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        // Initialize table on load
+        window.onload = () => renderTable();
+    </script>
+</body>
+</html>

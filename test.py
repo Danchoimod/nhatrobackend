@@ -750,6 +750,8 @@ async def handle_qr_extraction():
         await shared_page.goto("https://dichvucong.bocongan.gov.vn/bo-cong-an/tiep-nhan-online/chon-truong-hop-ho-so?ma-thu-tuc-public=26346")
         await shared_page.wait_for_load_state("networkidle")
         
+        print("văng chưa")
+
         # Kiểm tra xem đã đăng nhập chưa
         try:
             # Nếu đã đăng nhập sẽ thấy form này
