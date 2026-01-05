@@ -1,1 +1,0 @@
-curl.exe -X POST http://127.0.0.1:8000/send-to-web -H "Content-Type: application/json; charset=utf-8" --data-binary "@data.json"

@@ -9,6 +9,7 @@ app = FastAPI()
 shared_page = None 
 data_queue = asyncio.Queue()
 is_processing = False
+selected_branch = "2"  # Mặc định chi nhánh 2
 
 # Quản lý kết nối để gửi tín hiệu đổi màu
 class ConnectionManager:
@@ -84,20 +85,28 @@ async def select_dropdown_human(page, selector, label_text):
         print(f"   [!] Lỗi khi chọn {label_text}: {e}")
 
 async def auto_fill_location_and_open_form():
-    global shared_page
+    global shared_page, selected_branch
     try:
-        print("\n[BƯỚC 1] Thiết lập Cơ sở lưu trú...")
+        print(f"\n[BƯỚC 1] Thiết lập Cơ sở lưu trú... (Chi nhánh {selected_branch})")
         await select_dropdown_human(shared_page, "select#accomStay_cboPROVINCE_ID", "Thành phố Cần Thơ")
         await select_dropdown_human(shared_page, "select#accomStay_cboADDRESS_ID", "Phường Long Tuyền")
         await select_dropdown_human(shared_page, "select#accomStay_cboACCOMMODATION_TYPE", "Nhà ngăn phòng cho thuê")
-        await select_dropdown_human(shared_page, "select#accomStay_cboNAME", "NHÀ TRỌ TÂM AN 2")
-        print("[BƯỚC 2] Mở form thêm người...")
-        btn_add = "a#btnAddPersonLT" 
-        await shared_page.wait_for_selector(btn_add, state="visible")
-        await shared_page.click(btn_add)
-        await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=10000)
-        await asyncio.sleep(1)
-        print("[OK] Sẵn sàng nhận dữ liệu khách.")
+        
+        # Chọn tên chi nhánh dựa trên selected_branch
+        if selected_branch == "1":
+            await select_dropdown_human(shared_page, "select#accomStay_cboNAME", "Hộ Kinh Doanh Nhà Trọ Tâm An 1")
+            print("[OK] Đã chọn: Hộ Kinh Doanh Nhà Trọ Tâm An 1")
+        else:  # Mặc định chi nhánh 2
+            await select_dropdown_human(shared_page, "select#accomStay_cboNAME", "NHÀ TRỌ TÂM AN 2")
+            print("[OK] Đã chọn: NHÀ TRỌ TÂM AN 2")
+            
+        # print("[BƯỚC 2] Mở form thêm người...")
+        # btn_add = "a#btnAddPersonLT" 
+        # await shared_page.wait_for_selector(btn_add, state="visible")
+        # await shared_page.click(btn_add)
+        # await shared_page.wait_for_selector("#addpersonLT", state="visible", timeout=10000)
+        # await asyncio.sleep(1)
+        # print("[OK] Sẵn sàng nhận dữ liệu khách.")
     except Exception as e:
         print(f"[LỖI] Thiết lập thất bại: {e}")
 
@@ -227,11 +236,27 @@ async def process_queue():
 
 @app.post("/send-to-web")
 async def receive_data(data: dict, background_tasks: BackgroundTasks):
+    global selected_branch
     items = data.get("items", [])
+    branch = data.get("branch", "2")  # Mặc định chi nhánh 2
+    selected_branch = branch
+    
     for idx, item in enumerate(items):
         await data_queue.put({"index": idx, "data": item})
     if not is_processing: background_tasks.add_task(process_queue)
-    return {"status": "started", "message": f"Bắt đầu xử lý {len(items)} người."}
+    return {"status": "started", "message": f"Bắt đầu xử lý {len(items)} người (Chi nhánh {branch})."}
+
+@app.post("/set-branch")
+async def set_branch(data: dict, background_tasks: BackgroundTasks):
+    global selected_branch
+    branch = data.get("branch", "2")
+    selected_branch = branch
+    print(f"\n[CHI NHÁNH] Đã chọn chi nhánh {branch}")
+    
+    # Thực hiện chọn lại cơ sở lưu trú
+    background_tasks.add_task(auto_fill_location_and_open_form)
+    
+    return {"status": "success", "message": f"Đã chuyển sang chi nhánh {branch}"}
 
 async def extract_qr_code(start_monitor=True):
     """Trích xuất mã QR từ trang đăng nhập và gửi về frontend"""

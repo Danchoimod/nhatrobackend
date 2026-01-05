@@ -14,6 +14,19 @@
             0%, 100% { border-color: #eab308; }
             50% { border-color: #fca5a5; }
         }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -32,6 +45,10 @@
                     <button onclick="document.getElementById('importFile').click()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2 rounded-xl transition border border-amber-200 text-sm font-semibold">
                         <i class="fa-solid fa-file-import mr-1"></i> Nhập JSON
                     </button>
+                    <select id="branchSelect" onchange="onBranchChange()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl transition border border-blue-200 text-sm font-semibold cursor-pointer">
+                        <option value="1">Tâm An 1</option>
+                        <option value="2">Tâm An 2</option>
+                    </select>
                     <button onclick="exportJSON()" class="bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-xl transition border border-gray-300 text-sm font-semibold">
                         <i class="fa-solid fa-download mr-1"></i> Xuất
                     </button>
@@ -42,6 +59,50 @@
             </div>
         </div>
     </nav>
+
+    <!-- Modal Chọn Chi Nhánh -->
+    <div id="branchModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                    <i class="fa-solid fa-building text-3xl text-blue-600"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800">Chọn Chi Nhánh</h3>
+                <p class="text-gray-500 mt-2">Vui lòng chọn chi nhánh để bắt đầu</p>
+            </div>
+            <div class="space-y-3">
+                <button onclick="selectBranch('1')" class="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-bold shadow-lg transition transform hover:scale-105 flex items-center justify-between">
+                    <span><i class="fa-solid fa-hotel mr-2"></i>Hộ Kinh Doanh Nhà Trọ Tâm An 1</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <button onclick="selectBranch('2')" class="w-full p-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-bold shadow-lg transition transform hover:scale-105 flex items-center justify-between">
+                    <span><i class="fa-solid fa-hotel mr-2"></i>NHÀ TRỌ TÂM AN 2</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Đang Chọn Chi Nhánh -->
+    <div id="branchSelectionModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="flex items-center justify-center mb-6">
+                <div class="bg-blue-100 rounded-full p-4">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-blue-600"></i>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-center text-gray-800 mb-4">Đang chọn chi nhánh</h3>
+            <div id="selectionSteps" class="space-y-3 text-sm">
+                <!-- Steps will be added dynamically -->
+            </div>
+            <div class="mt-6 text-center">
+                <div class="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-semibold">
+                    <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+                    Vui lòng đợi...
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container mx-auto px-4 py-6">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -184,6 +245,118 @@
 
     <script>
         let guestList = [];
+        let selectedBranch = localStorage.getItem('selectedBranch') || null;
+
+        // Kiểm tra và hiển thị modal chọn chi nhánh khi load trang
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!selectedBranch) {
+                showBranchModal();
+            } else {
+                // Cập nhật selector với giá trị đã lưu
+                document.getElementById('branchSelect').value = selectedBranch;
+            }
+        });
+
+        function showBranchModal() {
+            const modal = document.getElementById('branchModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideBranchModal() {
+            const modal = document.getElementById('branchModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function selectBranch(branchValue) {
+            selectedBranch = branchValue;
+            localStorage.setItem('selectedBranch', branchValue);
+            document.getElementById('branchSelect').value = branchValue;
+            hideBranchModal();
+            
+            // Gửi thông tin chi nhánh đến Python để thực hiện chọn
+            notifyBranchChange(branchValue);
+        }
+
+        function onBranchChange() {
+            const branchSelect = document.getElementById('branchSelect');
+            selectedBranch = branchSelect.value;
+            localStorage.setItem('selectedBranch', selectedBranch);
+            
+            // Gửi thông tin chi nhánh đến Python để thực hiện chọn lại
+            notifyBranchChange(selectedBranch);
+        }
+
+        async function notifyBranchChange(branchValue) {
+            try {
+                // Hiển thị modal đang chọn
+                showBranchSelectionModal(branchValue);
+                
+                const response = await fetch('http://127.0.0.1:8000/set-branch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ branch: branchValue })
+                });
+                
+                if (response.ok) {
+                    console.log(`Đã chọn chi nhánh ${branchValue}`);
+                } else {
+                    console.error('Lỗi khi gửi thông tin chi nhánh');
+                }
+            } catch (error) {
+                console.error('Lỗi kết nối:', error);
+                alert('LỖI: Không thể kết nối với server Python!');
+                hideBranchSelectionModal();
+            }
+        }
+
+        function showBranchSelectionModal(branchValue) {
+            const modal = document.getElementById('branchSelectionModal');
+            const stepsContainer = document.getElementById('selectionSteps');
+            
+            // Định nghĩa các bước dựa trên chi nhánh
+            const branchName = branchValue === '1' ? 'Hộ Kinh Doanh Nhà Trọ Tâm An 1' : 'NHÀ TRỌ TÂM AN 2';
+            const steps = [
+                { icon: 'fa-map-marker-alt', text: 'Thành phố Cần Thơ', color: 'blue' },
+                { icon: 'fa-location-dot', text: 'Phường Long Tuyền', color: 'green' },
+                { icon: 'fa-building', text: 'Nhà ngăn phòng cho thuê', color: 'purple' },
+                { icon: 'fa-hotel', text: branchName, color: 'orange' }
+            ];
+            
+            // Xóa nội dung cũ
+            stepsContainer.innerHTML = '';
+            
+            // Hiển thị modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Thêm từng bước với animation
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    const stepDiv = document.createElement('div');
+                    stepDiv.className = 'flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 animate-fadeIn';
+                    stepDiv.innerHTML = `
+                        <div class="flex-shrink-0 w-8 h-8 bg-${step.color}-100 rounded-full flex items-center justify-center mr-3">
+                            <i class="fa-solid ${step.icon} text-${step.color}-600 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-700">${step.text}</div>
+                        </div>
+                        <i class="fa-solid fa-check text-green-500"></i>
+                    `;
+                    stepsContainer.appendChild(stepDiv);
+                }, index * 500);
+            });
+            
+            // KHÔNG tự động đóng - chờ WebSocket xác nhận từ Python
+        }
+
+        function hideBranchSelectionModal() {
+            const modal = document.getElementById('branchSelectionModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
 
         function saveGuest() {
             const form = document.getElementById('guestForm');
@@ -358,6 +531,11 @@
 
         async function sendToPython() {
             if (guestList.length === 0) return alert("Danh sách trống!");
+            if (!selectedBranch) {
+                showBranchModal();
+                return alert("Vui lòng chọn chi nhánh trước!");
+            }
+            
             const btn = event.currentTarget;
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ĐANG GỬI...`;
             btn.disabled = true;
@@ -370,7 +548,10 @@
                 const response = await fetch('http://127.0.0.1:8000/send-to-web', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: guestList })
+                    body: JSON.stringify({ 
+                        items: guestList,
+                        branch: selectedBranch 
+                    })
                 });
                 const result = await response.json();
                 // Không alert nữa để không chặn luồng
@@ -390,6 +571,25 @@
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                
+                // Xử lý xác nhận hoàn thành chọn chi nhánh
+                if (data.type === 'BRANCH_SELECTED') {
+                    console.log('[BRANCH] Đã nhận xác nhận từ Python:', data.message);
+                    // Đóng modal sau khi nhận xác nhận
+                    setTimeout(() => {
+                        hideBranchSelectionModal();
+                    }, 500);
+                    return;
+                }
+                
+                // Xử lý lỗi khi chọn chi nhánh
+                if (data.type === 'BRANCH_ERROR') {
+                    console.error('[BRANCH ERROR]', data.message);
+                    alert('Lỗi khi chọn chi nhánh: ' + data.message);
+                    hideBranchSelectionModal();
+                    return;
+                }
+                
                 const index = data.index;
                 const row = document.getElementById(`row-${index}`);
                 const statusCell = document.getElementById(`status-cell-${index}`);
