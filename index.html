@@ -45,6 +45,9 @@
                     <button onclick="document.getElementById('importFile').click()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-4 py-2 rounded-xl transition border border-amber-200 text-sm font-semibold">
                         <i class="fa-solid fa-file-import mr-1"></i> Nhập JSON
                     </button>
+                    <button onclick="showDateModal()" class="bg-purple-50 hover:bg-purple-100 text-purple-700 px-4 py-2 rounded-xl transition border border-purple-200 text-sm font-semibold">
+                        <i class="fa-solid fa-calendar-days mr-1"></i> Ngày lưu trú
+                    </button>
                     <select id="branchSelect" onchange="onBranchChange()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl transition border border-blue-200 text-sm font-semibold cursor-pointer">
                         <option value="1">Tâm An 1</option>
                         <option value="2">Tâm An 2</option>
@@ -100,6 +103,46 @@
                     <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
                     Vui lòng đợi...
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ngày Lưu Trú -->
+    <div id="dateModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <div class="bg-purple-100 rounded-full p-3 mr-3">
+                        <i class="fa-solid fa-calendar-days text-2xl text-purple-600"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Chỉnh Ngày Lưu Trú</h3>
+                </div>
+                <button onclick="hideDateModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-gray-500 text-sm mb-6">Thay đổi ngày lưu trú cho tất cả <span id="totalGuests" class="font-bold text-purple-600">0</span> khách</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        <i class="fa-solid fa-calendar-plus text-purple-600 mr-2"></i>Từ ngày
+                    </label>
+                    <input type="text" id="modalStartDate" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" placeholder="VD: 13/12/2025">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">
+                        <i class="fa-solid fa-calendar-check text-purple-600 mr-2"></i>Đến ngày
+                    </label>
+                    <input type="text" id="modalEndDate" class="w-full border-2 border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" placeholder="VD: 31/12/2025">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="hideDateModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition">
+                    Hủy
+                </button>
+                <button onclick="applyDatesToAll()" class="flex-[2] bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold shadow-lg transition transform active:scale-95">
+                    <i class="fa-solid fa-check mr-2"></i>Lưu thay đổi
+                </button>
             </div>
         </div>
     </div>
@@ -349,13 +392,74 @@
                 }, index * 500);
             });
             
-            // KHÔNG tự động đóng - chờ WebSocket xác nhận từ Python
+            // Tự động đóng sau khi hoàn thành tất cả các bước (3 giây)
+            setTimeout(() => {
+                hideBranchSelectionModal();
+            }, steps.length * 500 + 2000);
         }
 
         function hideBranchSelectionModal() {
             const modal = document.getElementById('branchSelectionModal');
             modal.classList.remove('flex');
             modal.classList.add('hidden');
+        }
+
+        function showDateModal() {
+            if (guestList.length === 0) {
+                return alert('Danh sách trống! Vui lòng thêm khách trước.');
+            }
+            
+            const modal = document.getElementById('dateModal');
+            document.getElementById('totalGuests').textContent = guestList.length;
+            
+            // Lấy ngày hiện tại từ người đầu tiên (nếu có)
+            if (guestList.length > 0) {
+                document.getElementById('modalStartDate').value = guestList[0].thoi_gian_luu_tru || '';
+                document.getElementById('modalEndDate').value = guestList[0].luu_tru_den || '';
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideDateModal() {
+            const modal = document.getElementById('dateModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function applyDatesToAll() {
+            const startDate = document.getElementById('modalStartDate').value.trim();
+            const endDate = document.getElementById('modalEndDate').value.trim();
+            
+            if (!startDate || !endDate) {
+                return alert('Vui lòng nhập đầy đủ ngày bắt đầu và kết thúc!');
+            }
+            
+            // Cập nhật tất cả người dùng
+            let updated = 0;
+            guestList.forEach(guest => {
+                guest.thoi_gian_luu_tru = startDate;
+                guest.luu_tru_den = endDate;
+                updated++;
+            });
+            
+            // Cập nhật cả form nếu đang ở trạng thái mặc định
+            document.getElementById('thoi_gian_luu_tru').value = startDate;
+            document.getElementById('luu_tru_den').value = endDate;
+            
+            renderTable();
+            hideDateModal();
+            
+            // Hiển thị thông báo thành công
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-[200] animate-fadeIn';
+            notification.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i>Đã cập nhật ngày cho ${updated} khách!`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
         }
 
         function saveGuest() {
@@ -571,25 +675,6 @@
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
-                // Xử lý xác nhận hoàn thành chọn chi nhánh
-                if (data.type === 'BRANCH_SELECTED') {
-                    console.log('[BRANCH] Đã nhận xác nhận từ Python:', data.message);
-                    // Đóng modal sau khi nhận xác nhận
-                    setTimeout(() => {
-                        hideBranchSelectionModal();
-                    }, 500);
-                    return;
-                }
-                
-                // Xử lý lỗi khi chọn chi nhánh
-                if (data.type === 'BRANCH_ERROR') {
-                    console.error('[BRANCH ERROR]', data.message);
-                    alert('Lỗi khi chọn chi nhánh: ' + data.message);
-                    hideBranchSelectionModal();
-                    return;
-                }
-                
                 const index = data.index;
                 const row = document.getElementById(`row-${index}`);
                 const statusCell = document.getElementById(`status-cell-${index}`);
