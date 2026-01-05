@@ -436,6 +436,38 @@
                 return alert('Vui lòng nhập đầy đủ ngày bắt đầu và kết thúc!');
             }
             
+            // Kiểm tra định dạng ngày (DD/MM/YYYY)
+            const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            const startMatch = startDate.match(dateRegex);
+            const endMatch = endDate.match(dateRegex);
+            
+            if (!startMatch || !endMatch) {
+                return alert('Định dạng ngày không hợp lệ! Vui lòng nhập theo định dạng DD/MM/YYYY (VD: 13/12/2025)');
+            }
+            
+            // Chuyển đổi sang Date object (DD/MM/YYYY -> MM/DD/YYYY cho JavaScript)
+            const startDateObj = new Date(startMatch[3], startMatch[2] - 1, startMatch[1]);
+            const endDateObj = new Date(endMatch[3], endMatch[2] - 1, endMatch[1]);
+            
+            // Kiểm tra ngày hợp lệ
+            if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+                return alert('Ngày không hợp lệ! Vui lòng kiểm tra lại.');
+            }
+            
+            // Kiểm tra ngày kết thúc phải sau ngày bắt đầu
+            if (endDateObj < startDateObj) {
+                return alert('Ngày kết thúc phải sau ngày bắt đầu!');
+            }
+            
+            // Tính số ngày chênh lệch
+            const diffTime = endDateObj - startDateObj;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Kiểm tra không vượt quá 30 ngày
+            if (diffDays > 30) {
+                return alert(`Thời gian lưu trú không được vượt quá 30 ngày! (Hiện tại: ${diffDays} ngày)`);
+            }
+            
             // Cập nhật tất cả người dùng
             let updated = 0;
             guestList.forEach(guest => {
@@ -454,7 +486,7 @@
             // Hiển thị thông báo thành công
             const notification = document.createElement('div');
             notification.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-[200] animate-fadeIn';
-            notification.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i>Đã cập nhật ngày cho ${updated} khách!`;
+            notification.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i>Đã cập nhật ngày cho ${updated} khách! (${diffDays} ngày)`;
             document.body.appendChild(notification);
             
             setTimeout(() => {
