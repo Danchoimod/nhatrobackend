@@ -95,10 +95,20 @@ async def auto_fill_location_and_open_form():
         # Chọn tên chi nhánh dựa trên selected_branch
         if selected_branch == "1":
             await select_dropdown_human(shared_page, "select#accomStay_cboNAME", "Hộ Kinh Doanh Nhà Trọ Tâm An 1")
-            print("[OK] Đã chọn: Hộ Kinh Doanh Nhà Trọ Tâm An 1")
+            branch_name = "Hộ Kinh Doanh Nhà Trọ Tâm An 1"
+            print(f"[OK] Đã chọn: {branch_name}")
         else:  # Mặc định chi nhánh 2
             await select_dropdown_human(shared_page, "select#accomStay_cboNAME", "NHÀ TRỌ TÂM AN 2")
-            print("[OK] Đã chọn: NHÀ TRỌ TÂM AN 2")
+            branch_name = "NHÀ TRỌ TÂM AN 2"
+            print(f"[OK] Đã chọn: {branch_name}")
+        
+        # Gửi xác nhận về frontend qua WebSocket
+        await manager.broadcast({
+            "type": "BRANCH_SELECTED",
+            "branch": selected_branch,
+            "message": f"[OK] Đã chọn: {branch_name}"
+        })
+        print("[WEBSOCKET] Đã gửi xác nhận chọn chi nhánh về frontend")
             
         # print("[BƯỚC 2] Mở form thêm người...")
         # btn_add = "a#btnAddPersonLT" 
@@ -109,6 +119,11 @@ async def auto_fill_location_and_open_form():
         # print("[OK] Sẵn sàng nhận dữ liệu khách.")
     except Exception as e:
         print(f"[LỖI] Thiết lập thất bại: {e}")
+        # Gửi thông báo lỗi về frontend
+        await manager.broadcast({
+            "type": "BRANCH_ERROR",
+            "message": str(e)
+        })
 
 async def fill_guest_data(task_item):
     global shared_page
