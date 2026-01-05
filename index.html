@@ -27,6 +27,49 @@
         .animate-fadeIn {
             animation: fadeIn 0.3s ease-out;
         }
+        
+        /* Custom Dropdown Styles */
+        .dropdown-wrapper {
+            position: relative;
+        }
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .dropdown-list.show {
+            display: block;
+        }
+        .dropdown-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .dropdown-item:hover {
+            background: #eff6ff;
+        }
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .dropdown-item mark {
+            background: #fef08a;
+            font-weight: 600;
+        }
+        .dropdown-wrapper input:focus {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -103,6 +146,42 @@
                     <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
                     Vui lòng đợi...
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xác Nhận Gửi -->
+    <div id="sendConfirmModal" class="fixed inset-0 bg-black bg-opacity-50 z-[100] hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="flex items-center justify-center mb-6">
+                <div class="bg-blue-100 rounded-full p-4">
+                    <i class="fa-solid fa-paper-plane text-4xl text-blue-600"></i>
+                </div>
+            </div>
+            <h3 class="text-2xl font-bold text-center text-gray-800 mb-2">Xác nhận gửi dữ liệu</h3>
+            <p class="text-gray-500 text-center text-sm mb-6">Chọn phương thức gửi dữ liệu đến trình duyệt</p>
+            
+            <div id="sendStats" class="bg-gray-50 rounded-lg p-4 mb-6 text-sm">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Tổng số khách:</span>
+                    <span id="totalCount" class="font-bold text-blue-600">0</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Số khách lỗi:</span>
+                    <span id="errorCount" class="font-bold text-red-600">0</span>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <button onclick="sendRetry()" id="btnRetry" class="w-full p-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-lg transition transform hover:scale-105 flex items-center justify-center">
+                    <i class="fa-solid fa-rotate-right mr-2"></i>Gửi lại (Chỉ người lỗi)
+                </button>
+                <button onclick="sendNew()" class="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-bold shadow-lg transition transform hover:scale-105 flex items-center justify-center">
+                    <i class="fa-solid fa-paper-plane mr-2"></i>Gửi mới (Toàn bộ)
+                </button>
+                <button onclick="cancelSend()" class="w-full p-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold transition">
+                    <i class="fa-solid fa-times mr-2"></i>Hủy
+                </button>
             </div>
         </div>
     </div>
@@ -210,11 +289,17 @@
                             <div class="p-4 space-y-3 border-t border-gray-200">
                                 <div>
                                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Tỉnh / TP</label>
-                                    <input type="text" id="tinh" name="tinh" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tỉnh Đồng Tháp">
+                                    <div class="dropdown-wrapper">
+                                        <input type="text" id="tinh" name="tinh" oninput="onTinhInput(event)" onfocus="onTinhFocus()" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Tỉnh Đồng Tháp" placeholder="Gõ để tìm kiếm..." autocomplete="off">
+                                        <div id="tinhDropdown" class="dropdown-list"></div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Xã / Phường</label>
-                                    <input type="text" id="xa" name="xa" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Xã Tân Long">
+                                    <div class="dropdown-wrapper">
+                                        <input type="text" id="xa" name="xa" oninput="onXaInput(event)" onfocus="onXaFocus()" class="mt-1 block w-full border border-gray-300 rounded-lg p-2" value="Xã Tân Long" placeholder="Gõ để tìm kiếm..." autocomplete="off">
+                                        <div id="xaDropdown" class="dropdown-list"></div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Địa chỉ chi tiết</label>
@@ -289,6 +374,10 @@
     <script>
         let guestList = [];
         let selectedBranch = localStorage.getItem('selectedBranch') || null;
+        
+        // Dữ liệu địa chỉ từ API
+        let provincesData = [];
+        let wardsData = [];
 
         // Kiểm tra và hiển thị modal chọn chi nhánh khi load trang
         window.addEventListener('DOMContentLoaded', function() {
@@ -298,6 +387,8 @@
                 // Cập nhật selector với giá trị đã lưu
                 document.getElementById('branchSelect').value = selectedBranch;
             }
+            // Load danh sách tỉnh khi trang load
+            loadProvinces();
         });
 
         function showBranchModal() {
@@ -464,7 +555,7 @@
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
             // Kiểm tra không vượt quá 30 ngày
-            if (diffDays > 30) {
+            if (diffDays >= 30) {
                 return alert(`Thời gian lưu trú không được vượt quá 30 ngày! (Hiện tại: ${diffDays} ngày)`);
             }
             
@@ -518,7 +609,7 @@
                 dia_chi_chi_tiet: formData.get('dia_chi_chi_tiet').trim(),
                 thoi_gian_luu_tru: formData.get('thoi_gian_luu_tru'),
                 luu_tru_den: formData.get('luu_tru_den'),
-                status: 'PENDING' // Trạng thái mặc định
+                status: editIndex > -1 ? guestList[editIndex].status : 'PENDING' // Giữ nguyên status khi edit, mặc định PENDING khi thêm mới
             };
 
             if (editIndex > -1) {
@@ -665,32 +756,79 @@
             reader.readAsText(file);
         }
 
-        async function sendToPython() {
+        function sendToPython() {
             if (guestList.length === 0) return alert("Danh sách trống!");
             if (!selectedBranch) {
                 showBranchModal();
                 return alert("Vui lòng chọn chi nhánh trước!");
             }
             
-            const btn = event.currentTarget;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ĐANG GỬI...`;
-            btn.disabled = true;
-
-            // Reset status visual
+            // Tính toán số liệu
+            const totalCount = guestList.length;
+            const errorCount = guestList.filter(g => g.status === 'ERROR').length;
+            
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('errorCount').textContent = errorCount;
+            
+            // Ẩn/hiện nút "Gửi lại" tùy vào số người lỗi
+            const btnRetry = document.getElementById('btnRetry');
+            if (errorCount === 0) {
+                btnRetry.style.display = 'none';
+            } else {
+                btnRetry.style.display = 'flex';
+            }
+            
+            // Hiển thị modal
+            const modal = document.getElementById('sendConfirmModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function cancelSend() {
+            const modal = document.getElementById('sendConfirmModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+        
+        async function sendRetry() {
+            // Chỉ gửi những người bị lỗi
+            const errorGuests = guestList.filter(g => g.status === 'ERROR');
+            
+            if (errorGuests.length === 0) {
+                cancelSend();
+                return alert('Không có khách nào bị lỗi!');
+            }
+            
+            cancelSend();
+            await performSend(errorGuests, false);
+        }
+        
+        async function sendNew() {
+            // Gửi toàn bộ danh sách
+            cancelSend();
+            
+            // Reset tất cả status về PENDING
             guestList.forEach(g => g.status = 'PENDING');
             renderTable();
+            
+            await performSend(guestList, true);
+        }
+        
+        async function performSend(itemsToSend, resetStatus) {
+            const btn = document.querySelector('button[onclick="sendToPython()"]');
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ĐANG GỬI...`;
+            btn.disabled = true;
 
             try {
                 const response = await fetch('http://127.0.0.1:8000/send-to-web', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        items: guestList,
+                        items: itemsToSend,
                         branch: selectedBranch 
                     })
                 });
                 const result = await response.json();
-                // Không alert nữa để không chặn luồng
                 console.log("Server response:", result.message);
             } catch (error) {
                 alert("LỖI: Không thể kết nối với server Python (browser.py)!");
@@ -734,6 +872,163 @@
                 }
             } catch (e) { console.error("WS Error:", e); }
         };
+        
+        // Đóng dropdown khi click ra ngoài
+        document.addEventListener('click', function(event) {
+            const tinhWrapper = document.getElementById('tinh')?.closest('.dropdown-wrapper');
+            const xaWrapper = document.getElementById('xa')?.closest('.dropdown-wrapper');
+            
+            if (tinhWrapper && !tinhWrapper.contains(event.target)) {
+                document.getElementById('tinhDropdown').classList.remove('show');
+            }
+            
+            if (xaWrapper && !xaWrapper.contains(event.target)) {
+                document.getElementById('xaDropdown').classList.remove('show');
+            }
+        });
+        
+        // --- XỬ LÝ DROPDOWN ĐỊA CHỈ ---
+        async function loadProvinces() {
+            try {
+                const response = await fetch('https://provinces.open-api.vn/api/v2/p/');
+                provincesData = await response.json();
+            } catch (error) {
+                console.error('Lỗi khi load danh sách tỉnh:', error);
+            }
+        }
+        
+        function onTinhFocus() {
+            // Hiển thị tất cả tỉnh khi focus
+            showTinhDropdown('');
+        }
+        
+        function onTinhInput(event) {
+            const searchText = event.target.value;
+            showTinhDropdown(searchText);
+        }
+        
+        function showTinhDropdown(searchText) {
+            const dropdown = document.getElementById('tinhDropdown');
+            
+            // Filter provinces dựa trên searchText
+            const filtered = provincesData.filter(province => 
+                province.name.toLowerCase().includes(searchText.toLowerCase())
+            );
+            
+            if (filtered.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            
+            // Render dropdown items
+            dropdown.innerHTML = '';
+            filtered.forEach(province => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                
+                // Highlight matched text
+                const regex = new RegExp(`(${searchText})`, 'gi');
+                const highlightedText = province.name.replace(regex, '<mark>$1</mark>');
+                item.innerHTML = highlightedText;
+                
+                item.onclick = () => selectTinh(province);
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.classList.add('show');
+        }
+        
+        async function selectTinh(province) {
+            document.getElementById('tinh').value = province.name;
+            document.getElementById('tinhDropdown').classList.remove('show');
+            
+            // Clear xã/phường
+            document.getElementById('xa').value = '';
+            document.getElementById('xaDropdown').innerHTML = '';
+            
+            // Load wards cho tỉnh đã chọn
+            try {
+                const response = await fetch(`https://provinces.open-api.vn/api/v2/p/${province.code}?depth=2`);
+                const provinceDetail = await response.json();
+                
+                wardsData = [];
+                // API v2 trả về wards trực tiếp trong province object
+                if (provinceDetail.wards && Array.isArray(provinceDetail.wards)) {
+                    wardsData = provinceDetail.wards;
+                }
+                
+                console.log(`Loaded ${wardsData.length} wards for ${province.name}`);
+            } catch (error) {
+                console.error('Lỗi khi load danh sách xã/phường:', error);
+            }
+        }
+        
+        function onXaFocus() {
+            // Hiển thị tất cả xã/phường khi focus (nếu đã chọn tỉnh)
+            if (wardsData.length > 0) {
+                showXaDropdown('');
+            }
+        }
+        
+        function onXaInput(event) {
+            const searchText = event.target.value;
+            showXaDropdown(searchText);
+        }
+        
+        function showXaDropdown(searchText) {
+            const dropdown = document.getElementById('xaDropdown');
+            
+            if (wardsData.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            
+            // Filter wards dựa trên searchText
+            const filtered = wardsData.filter(ward => 
+                ward.name.toLowerCase().includes(searchText.toLowerCase())
+            );
+            
+            if (filtered.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+            
+            // Render dropdown items
+            dropdown.innerHTML = '';
+            filtered.slice(0, 50).forEach(ward => { // Giới hạn 50 items để tránh lag
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                
+                // Highlight matched text
+                const regex = new RegExp(`(${searchText})`, 'gi');
+                const highlightedText = ward.name.replace(regex, '<mark>$1</mark>');
+                item.innerHTML = highlightedText;
+                
+                item.onclick = () => selectXa(ward);
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.classList.add('show');
+        }
+        
+        function selectXa(ward) {
+            document.getElementById('xa').value = ward.name;
+            document.getElementById('xaDropdown').classList.remove('show');
+        }
+        
+        // Đóng dropdown khi click ra ngoài
+        document.addEventListener('click', function(event) {
+            const tinhWrapper = document.getElementById('tinh').closest('.dropdown-wrapper');
+            const xaWrapper = document.getElementById('xa').closest('.dropdown-wrapper');
+            
+            if (!tinhWrapper.contains(event.target)) {
+                document.getElementById('tinhDropdown').classList.remove('show');
+            }
+            
+            if (!xaWrapper.contains(event.target)) {
+                document.getElementById('xaDropdown').classList.remove('show');
+            }
+        });
     </script>
 </body>
 </html>
